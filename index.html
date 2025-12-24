@@ -132,8 +132,13 @@
     
     .event-item {
       display: flex; justify-content: space-between; align-items: center;
-      padding: 12px 0; border-bottom: 1px solid #f0f0f0; font-size: 0.95rem;
+      padding: 12px 6px; border-bottom: 1px solid #f0f0f0; font-size: 0.95rem;
+      transition: background-color 0.2s; border-radius: 4px;
     }
+    /* 點擊效果 */
+    .event-item.clickable { cursor: pointer; }
+    .event-item.clickable:active { background-color: #f1f3f5; }
+
     .event-item:last-child { border-bottom: none; }
     .event-item-content { flex: 1; margin-right: 8px; word-break: break-all; line-height: 1.6; display: flex; align-items: center; flex-wrap: wrap; }
     
@@ -145,6 +150,14 @@
       border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 1rem;
     }
 
+    /* 時間輸入框特別調整 */
+    .time-inputs input[type="time"] {
+        width: 90px !important; /* 強制寬度變小 */
+        padding: 4px !important;
+        font-size: 0.9rem !important;
+        height: 36px;
+    }
+
     .chip-group { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
     .chip {
       padding: 6px 12px; border: 1px solid #ddd; border-radius: 20px;
@@ -154,6 +167,7 @@
     
     /* 動態顏色 Class */
     .chip.active { color: white; border-color: transparent; }
+    /* 確保有基礎背景色，避免白字白底 */
     .chip.active.dept-ALL { background: var(--color-ALL); }
     .chip.active.dept-SG2 { background: var(--color-SG2); }
     .chip.active.dept-SG3 { background: var(--color-SG3); }
@@ -180,7 +194,7 @@
     .dept-badge.KEN { background-color: var(--color-KEN); }
     
     .holiday-badge { background-color: var(--color-HOLIDAY); color: white; }
-    .holiday-text { color: var(--color-HOLIDAY); font-weight: bold; }
+    .holiday-text { color: var(--color-HOLIDAY); font-weight: bold; font-size: 0.85rem; } /* 假日字體縮小 */
     
     /* 類別泡泡 (動態顏色) */
     .tag-badge { color: #fff; opacity: 0.9; }
@@ -209,22 +223,16 @@
     const supabaseKey = "sb_publishable_XEf_IKh9aiU7if2jrNHbmQ_Fvrqvjhd";
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // 🔥 全域登出函式 (修復手機版登出問題)
+    // 🔥 全域登出函式
     window.logout = async function() {
         if(!confirm("確定要登出嗎？")) return;
-        
-        // 1. 強制清除本地資料
         localStorage.clear();
         sessionStorage.clear();
-        
-        // 2. 嘗試後端登出
         try { await supabase.auth.signOut(); } catch(e) { console.error(e); }
-        
-        // 3. 暴力跳轉 (防止手機瀏覽器讀取快取)
         window.location.replace(window.location.pathname + "?t=" + new Date().getTime());
     };
 
-    // 🔥 全域刪除/修改函式 (ID操作)
+    // 🔥 全域刪除/修改函式
     window.deleteHolidayById = async function(id) {
       if(!confirm("確定要刪除這個假日嗎？")) return;
       const { error } = await supabase.from("holidays").delete().eq("id", id);
@@ -251,10 +259,7 @@
     let userSession = null;
     let userDept = "NONE";
     let isPrivateVisible = localStorage.getItem("showPrivate") === "true";
-    
-    // 🔥 補回這個變數，修復點擊日期錯誤
     let multiSelectMode = false;
-    
     let selectedDates = new Set();
     let selectedTag = ""; 
     let selectedDeptBubble = "ALL";
@@ -403,6 +408,7 @@
       const ymd = currentDate.replaceAll("-","");
       const holiday = getHoliday(ymd);
       
+      // 顯示假日
       if (holiday) {
         const div = document.createElement("div"); div.className = "event-item";
         const contentSpan = document.createElement("span");
@@ -411,25 +417,22 @@
         div.appendChild(contentSpan);
 
         if (userDept === "KEN") {
-          const editBtn = document.createElement("button");
-          editBtn.textContent = "✎";
-          editBtn.className = "icon-btn";
-          editBtn.style.color = "#aaa";
-          editBtn.onclick = () => {
-             window.showAddForm(true);
-             const holidayChip = Array.from(document.querySelectorAll("#dept-bubbles .chip")).find(c => c.textContent === "假日");
-             if(holidayChip) holidayChip.click();
-             document.getElementById("new-desc").value = holiday.description;
-             isEditingEventId = { type: 'holiday', id: holiday.id };
-          };
+            // KEN 點擊整行即可編輯
+            div.classList.add("clickable");
+            div.onclick = () => {
+                 window.showAddForm(true);
+                 const holidayChip = Array.from(document.querySelectorAll("#dept-bubbles .chip")).find(c => c.textContent === "假日");
+                 if(holidayChip) holidayChip.click();
+                 document.getElementById("new-desc").value = holiday.description;
+                 isEditingEventId = { type: 'holiday', id: holiday.id };
+            };
 
-          const delBtn = document.createElement("button"); 
-          delBtn.textContent = "刪除";
-          delBtn.style.marginLeft = "8px";
-          delBtn.setAttribute("onclick", `window.deleteHolidayById(${holiday.id}); event.stopPropagation();`);
-          
-          div.appendChild(editBtn);
-          div.appendChild(delBtn);
+            const delBtn = document.createElement("button"); 
+            delBtn.textContent = "刪除";
+            delBtn.style.marginLeft = "8px";
+            // 阻止冒泡，避免觸發編輯
+            delBtn.setAttribute("onclick", `event.stopPropagation(); window.deleteHolidayById(${holiday.id});`);
+            div.appendChild(delBtn);
         }
         list.appendChild(div);
       }
@@ -451,13 +454,12 @@
           const span = document.createElement("span"); 
           span.className = `event-item-content dept-text-${ev.dept}`;
           span.innerHTML = `${timeHtml}${deptHtml}${catHtml}${ev.description}`;
+          div.appendChild(span);
 
           if (canOperateDept(ev.dept)) {
-            const editBtn = document.createElement("button");
-            editBtn.textContent = "✎";
-            editBtn.className = "icon-btn";
-            editBtn.style.color = "#aaa";
-            editBtn.onclick = () => {
+            // 有權限則點擊整行編輯
+            div.classList.add("clickable");
+            div.onclick = () => {
                 window.showAddForm(true);
                 const deptChip = Array.from(document.querySelectorAll("#dept-bubbles .chip")).find(c => c.textContent === ev.dept);
                 if(deptChip) window.selectDeptBubble(deptChip, ev.dept);
@@ -476,12 +478,10 @@
             };
 
             const delBtn = document.createElement("button"); delBtn.textContent="刪除"; delBtn.style.marginLeft="8px";
-            delBtn.setAttribute("onclick", `window.deleteEventById(${ev.id}); event.stopPropagation();`);
-            
-            div.appendChild(editBtn);
-            div.appendChild(span); 
+            // 阻止冒泡
+            delBtn.setAttribute("onclick", `event.stopPropagation(); window.deleteEventById(${ev.id});`);
             div.appendChild(delBtn);
-          } else div.appendChild(span);
+          }
           list.appendChild(div);
         });
       }
@@ -650,7 +650,6 @@
         el.addEventListener("touchstart", () => pressTimer = setTimeout(() => { multiSelectMode=true; toggleSelect(ymd, el); }, 450));
         el.addEventListener("touchend", () => clearTimeout(pressTimer));
         
-        // 🔥🔥 這裡就是之前出錯的地方，現在因為補回了 multiSelectMode 變數，這裡會正常運作
         el.addEventListener("click", () => { 
             if (multiSelectMode) toggleSelect(ymd, el); 
             else openModal(fullDate, events); 
@@ -750,27 +749,15 @@
       await supabase.auth.signInWithOAuth({ provider:"google", options:{redirectTo: redirectUrl} });
     }
     window.login = login;
-    // 🔥 強力登出函式
+    
     window.logout = async () => {
-      // 1. 呼叫 Supabase 登出接口
       const { error } = await supabase.auth.signOut();
-      
-      if (error) {
-        console.error("Supabase 登出錯誤:", error.message);
-      }
-
-      // 2. 🔥 核彈級清除：不管 Supabase 有沒有清乾淨，我們手動把瀏覽器緩存全清空
+      if (error) { console.error("Supabase 登出錯誤:", error.message); }
       localStorage.clear();
       sessionStorage.clear();
-
-      // 3. 重置變數
       userSession = null;
       userDept = "NONE";
-
-      // 4. 更新 UI (不用重整頁面，直接切換顯示)
       handleSession(null);
-      
-      // 5. 強制跳轉頁面
       window.location.replace(window.location.pathname + "?t=" + new Date().getTime());
     };
 
@@ -782,7 +769,7 @@
       document.getElementById("logoutBtn").style.display = session ? "inline-block" : "none";
       document.getElementById("user-info").textContent = session ? `${session.user.email} ${label}` : "";
       initMenus();
-      fetchCategories(); // 🔥 登入後抓類別
+      fetchCategories(); 
     }
 
     supabase.auth.onAuthStateChange((evt, session) => {
@@ -854,7 +841,14 @@
 
       opts.forEach(d => {
         const chip = document.createElement("div"); chip.className = "chip";
-        if(d === "HOLIDAY") { chip.textContent = "假日"; chip.classList.add("holiday-chip"); } else { chip.textContent = d; }
+        // 🔥 這裡修復了：添加對應的部門 class，確保點擊後的 active 顏色正確顯示
+        if(d === "HOLIDAY") { 
+            chip.textContent = "假日"; 
+            chip.classList.add("holiday-chip"); 
+        } else { 
+            chip.textContent = d; 
+            chip.classList.add(`dept-${d}`); // 加入部門 class
+        }
         
         chip.onclick = () => window.selectDeptBubble(chip, d);
         container.appendChild(chip);
@@ -960,10 +954,10 @@
              </label>
              <span style="font-size:0.9rem; margin-left:8px; flex:1;">整天</span>
              
-             <div id="time-inputs" class="time-inputs hidden" style="display:flex; gap:5px;">
-               <input type="time" id="start-time" style="width:auto; margin:0;"> 
-               <span style="align-self:center;">~</span>
-               <input type="time" id="end-time" style="width:auto; margin:0;">
+             <div id="time-inputs" class="time-inputs hidden" style="display:flex; gap:5px; align-items:center;">
+               <input type="time" id="start-time"> 
+               <span>~</span>
+               <input type="time" id="end-time">
              </div>
           </div>
 
