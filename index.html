@@ -151,9 +151,9 @@
       font-size: 0.9rem; cursor: pointer; background: #f8f9fa; color: #555;
       transition: all 0.2s; user-select: none; white-space: nowrap; 
     }
-    .chip.active { background: var(--primary); color: white; border-color: var(--primary); }
     
     /* 動態顏色 Class */
+    .chip.active { color: white; border-color: transparent; }
     .chip.active.dept-ALL { background: var(--color-ALL); }
     .chip.active.dept-SG2 { background: var(--color-SG2); }
     .chip.active.dept-SG3 { background: var(--color-SG3); }
@@ -182,6 +182,7 @@
     .holiday-badge { background-color: var(--color-HOLIDAY); color: white; }
     .holiday-text { color: var(--color-HOLIDAY); font-weight: bold; }
     
+    /* 類別泡泡 (動態顏色) */
     .tag-badge { color: #fff; opacity: 0.9; }
     .tag-badge.ALL { background-color: var(--color-ALL); }
     .tag-badge.SG2 { background-color: var(--color-SG2); }
@@ -208,22 +209,22 @@
     const supabaseKey = "sb_publishable_XEf_IKh9aiU7if2jrNHbmQ_Fvrqvjhd";
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // 🔥 全域登出函式 (強制跳轉防快取)
+    // 🔥 全域登出函式 (修復手機版登出問題)
     window.logout = async function() {
         if(!confirm("確定要登出嗎？")) return;
         
-        // 1. 清空本地存儲
+        // 1. 強制清除本地資料
         localStorage.clear();
         sessionStorage.clear();
         
-        // 2. 嘗試後端登出 (不等待結果，避免卡住)
-        supabase.auth.signOut();
-
-        // 3. 強制跳轉頁面 (加上時間戳記欺騙瀏覽器是新頁面)
-        window.location.href = window.location.pathname + "?t=" + new Date().getTime();
+        // 2. 嘗試後端登出
+        try { await supabase.auth.signOut(); } catch(e) { console.error(e); }
+        
+        // 3. 暴力跳轉 (防止手機瀏覽器讀取快取)
+        window.location.replace(window.location.pathname + "?t=" + new Date().getTime());
     };
 
-    // 🔥 全域刪除函式
+    // 🔥 全域刪除/修改函式 (ID操作)
     window.deleteHolidayById = async function(id) {
       if(!confirm("確定要刪除這個假日嗎？")) return;
       const { error } = await supabase.from("holidays").delete().eq("id", id);
@@ -251,14 +252,13 @@
     let userDept = "NONE";
     let isPrivateVisible = localStorage.getItem("showPrivate") === "true";
     
-    // 🔥 補回這個變數，解決點擊沒反應問題
+    // 🔥 補回這個變數，修復點擊日期錯誤
     let multiSelectMode = false;
-    let selectedDates = new Set();
     
-    // 編輯狀態
+    let selectedDates = new Set();
     let selectedTag = ""; 
     let selectedDeptBubble = "ALL";
-    let isEditingEventId = null; 
+    let isEditingEventId = null;
 
     function pad2(n){return String(n).padStart(2,"0");}
     function ymdToCompact(d){return d.replaceAll("-","");}
@@ -271,14 +271,13 @@
 
     async function checkWhitelist(email) {
       try {
-        const { data } = await supabase.from("allowed_users").select("email, dept").eq("email", email).maybeSingle();
+        const { data, error } = await supabase.from("allowed_users").select("email, dept").eq("email", email).maybeSingle();
         if (data) { userDept = (data.dept || "NONE").toUpperCase(); return true; }
         await supabase.from("allowed_users").insert([{ email, dept: "NONE" }]);
         userDept = "NONE"; return false;
       } catch (err) { console.error("Auth Error", err); userDept="NONE"; return false; }
     }
 
-    // 抓取類別
     async function fetchCategories() {
       const { data } = await supabase.from('categories').select('*').order('id');
       if(data) categoryList = data.map(c => c.name);
@@ -292,7 +291,7 @@
       const eq = await supabase.from("events").select("*").gte("date",start).lt("date",end).order("date");
       const events = (eq.data||[]).map(r=>({
         id: r.id, date: ymdToCompact(r.date), dept: r.dept, description: r.description,
-        category: r.category, 
+        category: r.category,
         startTime: r.start_time, endTime: r.end_time, isAllDay: r.is_all_day
       }));
 
@@ -307,14 +306,12 @@
       return userDept === dept;
     }
 
-    // --- UI 互動 ---
     window.toggleTimeInputs = function() {
       const isAllDay = document.getElementById("is-all-day").checked;
       const inputs = document.getElementById("time-inputs");
       if (isAllDay) inputs.classList.add("hidden"); else inputs.classList.remove("hidden");
     }
 
-    // 選擇類別泡泡
     window.selectTag = function(el, tag) {
       if (el.classList.contains("active")) {
         el.classList.remove("active"); selectedTag = "";
@@ -340,7 +337,7 @@
       if(selectedTag) {
          const activeTag = document.querySelector("#tag-container .chip.active");
          if(activeTag) {
-            activeTag.className = "chip active"; 
+            activeTag.className = "chip active";
             const currentDeptClass = (dept === "HOLIDAY" || dept === "PRIVATE") ? "dept-KEN" : `dept-${dept}`;
             activeTag.classList.add(currentDeptClass);
          }
@@ -419,7 +416,7 @@
           editBtn.className = "icon-btn";
           editBtn.style.color = "#aaa";
           editBtn.onclick = () => {
-             window.showAddForm(true); 
+             window.showAddForm(true);
              const holidayChip = Array.from(document.querySelectorAll("#dept-bubbles .chip")).find(c => c.textContent === "假日");
              if(holidayChip) holidayChip.click();
              document.getElementById("new-desc").value = holiday.description;
@@ -446,7 +443,6 @@
           
           let timeHtml = (!ev.isAllDay && ev.startTime) ? `<span class="badge time-badge">${ev.startTime.slice(0,5)}${ev.endTime?'~'+ev.endTime.slice(0,5):''}</span>` : "";
           let deptHtml = `<span class="badge dept-badge ${ev.dept}">${ev.dept}</span>`;
-          
           let catHtml = "";
           if (ev.category) {
              catHtml = `<span class="badge tag-badge ${ev.dept}">${ev.category}</span>`;
@@ -462,15 +458,13 @@
             editBtn.className = "icon-btn";
             editBtn.style.color = "#aaa";
             editBtn.onclick = () => {
-                window.showAddForm(true); 
+                window.showAddForm(true);
                 const deptChip = Array.from(document.querySelectorAll("#dept-bubbles .chip")).find(c => c.textContent === ev.dept);
                 if(deptChip) window.selectDeptBubble(deptChip, ev.dept);
-                
                 if(ev.category) {
                    const catChip = Array.from(document.querySelectorAll("#tag-container .chip")).find(c => c.textContent === ev.category);
                    if(catChip) window.selectTag(catChip, ev.category);
                 }
-                
                 document.getElementById("is-all-day").checked = ev.isAllDay;
                 window.toggleTimeInputs();
                 if(!ev.isAllDay) {
@@ -527,7 +521,7 @@
       } else {
         addSection.style.display = "block";
         updateAddDeptBubbles();
-        updateCategoryBubbles(); 
+        updateCategoryBubbles();
         window.toggleTagsVisibility(); 
       }
       document.getElementById("modal").style.display="flex";
@@ -548,6 +542,7 @@
 
       if (dept === "HOLIDAY") {
          if (userDept !== "KEN") { alert("權限不足"); return; }
+         
          if (isEditingEventId && isEditingEventId.type === 'holiday') {
             await supabase.from("holidays").update({ description: desc }).eq("id", isEditingEventId.id);
          } else {
@@ -568,7 +563,7 @@
         date: currentDate, 
         dept, 
         description: desc, 
-        category: selectedTag || null, 
+        category: selectedTag || null,
         is_all_day: isAllDay,
         start_time: startTime || null, 
         end_time: endTime || null
@@ -654,8 +649,12 @@
         let pressTimer;
         el.addEventListener("touchstart", () => pressTimer = setTimeout(() => { multiSelectMode=true; toggleSelect(ymd, el); }, 450));
         el.addEventListener("touchend", () => clearTimeout(pressTimer));
-        // 🔥 這裡使用 multiSelectMode 變數
-        el.addEventListener("click", () => { if (multiSelectMode) toggleSelect(ymd, el); else openModal(fullDate, events); });
+        
+        // 🔥🔥 這裡就是之前出錯的地方，現在因為補回了 multiSelectMode 變數，這裡會正常運作
+        el.addEventListener("click", () => { 
+            if (multiSelectMode) toggleSelect(ymd, el); 
+            else openModal(fullDate, events); 
+        });
 
         if (!/Mobi|Android/i.test(navigator.userAgent)) {
            el.onmouseenter = (e) => {
@@ -745,6 +744,150 @@
        const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = "export.ics"; a.click();
        document.getElementById("exportRangeModal").style.display = "none";
     };
+
+    async function login(){
+      const redirectUrl = window.location.origin + window.location.pathname;
+      await supabase.auth.signInWithOAuth({ provider:"google", options:{redirectTo: redirectUrl} });
+    }
+    window.login = login;
+    // 🔥 強力登出函式
+    window.logout = async () => {
+      // 1. 呼叫 Supabase 登出接口
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        console.error("Supabase 登出錯誤:", error.message);
+      }
+
+      // 2. 🔥 核彈級清除：不管 Supabase 有沒有清乾淨，我們手動把瀏覽器緩存全清空
+      localStorage.clear();
+      sessionStorage.clear();
+
+      // 3. 重置變數
+      userSession = null;
+      userDept = "NONE";
+
+      // 4. 更新 UI (不用重整頁面，直接切換顯示)
+      handleSession(null);
+      
+      // 5. 強制跳轉頁面
+      window.location.replace(window.location.pathname + "?t=" + new Date().getTime());
+    };
+
+    async function handleSession(session) {
+      userSession = session; userDept = "NONE";
+      if (session?.user?.email) await checkWhitelist(session.user.email);
+      const label = userDept==="ALL"?"(管理員)":userDept==="NONE"?"(唯讀)":`(${userDept})`;
+      document.getElementById("loginBtn").style.display = session ? "none" : "inline-block";
+      document.getElementById("logoutBtn").style.display = session ? "inline-block" : "none";
+      document.getElementById("user-info").textContent = session ? `${session.user.email} ${label}` : "";
+      initMenus();
+      fetchCategories(); // 🔥 登入後抓類別
+    }
+
+    supabase.auth.onAuthStateChange((evt, session) => {
+       if(evt==='SIGNED_IN' || evt==='TOKEN_REFRESHED') handleSession(session);
+       else if(evt==='SIGNED_OUT') handleSession(null);
+    });
+
+    function initMenus() {
+       const yearDd = document.getElementById("yearDropdown"), yToggle = yearDd.querySelector(".dropdown-toggle"), yMenu = yearDd.querySelector(".dropdown-menu");
+       yMenu.innerHTML=""; const cy = today.getFullYear();
+       for(let y=cy-5; y<=cy+5; y++){
+          const d = document.createElement("div"); d.textContent = y+"年"; d.dataset.value=y;
+          d.onclick=()=>{ yToggle.textContent=d.textContent; yToggle.dataset.value=y; updateCalendar(); yMenu.style.display="none"; };
+          yMenu.appendChild(d);
+       }
+       yToggle.textContent=cy+" 年"; yToggle.dataset.value=cy;
+       yToggle.onclick = () => yMenu.style.display = yMenu.style.display==="block"?"none":"block";
+       
+       const mDd = document.getElementById("monthDropdown"), mToggle = mDd.querySelector(".dropdown-toggle"), mMenu = mDd.querySelector(".dropdown-menu");
+       mToggle.textContent = (today.getMonth()+1)+" 月"; mToggle.dataset.value = today.getMonth()+1;
+       mToggle.onclick = () => mMenu.style.display = mMenu.style.display==="block"?"none":"block";
+       mMenu.querySelectorAll("div").forEach(d=>{ d.onclick=()=>{ mToggle.textContent=d.textContent; mToggle.dataset.value=d.dataset.value; updateCalendar(); mMenu.style.display="none"; } });
+
+       document.addEventListener("click", e => { if(!yearDd.contains(e.target)) yMenu.style.display="none"; if(!mDd.contains(e.target)) mMenu.style.display="none"; if(!document.getElementById("deptDropdown").contains(e.target)) document.querySelector("#deptDropdown .dropdown-menu").style.display="none"; });
+
+       const dDd = document.getElementById("deptDropdown"), dMenu = dDd.querySelector(".dropdown-menu"), dToggle = dDd.querySelector(".dropdown-toggle");
+       const oldP = dMenu.querySelector('[data-value="PRIVATE"]'); if(oldP) oldP.remove();
+       if(userDept==="KEN") {
+          const div = document.createElement("div"); div.className="dept-text-KEN"; div.dataset.value="PRIVATE"; div.textContent="KEN 私人日程";
+          dMenu.appendChild(div);
+          div.onclick=()=>{ currentDept="PRIVATE"; localStorage.setItem("selectedDept","PRIVATE"); dToggle.textContent=div.textContent; dToggle.className="dropdown-toggle dept-text-KEN"; dMenu.style.display="none"; updateCalendar(); };
+          
+          const pToggle = document.getElementById("privateToggle");
+          pToggle.style.display="flex"; 
+          pToggle.innerHTML = `<label class="switch"><input type="checkbox" id="privateCheckbox"><span class="slider"></span></label><span style="margin-left:8px; font-size:0.9rem;">私人</span>`;
+          
+          const ck = document.getElementById("privateCheckbox");
+          ck.checked = isPrivateVisible;
+          ck.onchange = (e)=>{ isPrivateVisible=e.target.checked; localStorage.setItem("showPrivate", isPrivateVisible); updateCalendar(); };
+       }
+
+       dToggle.onclick = () => dMenu.style.display=dMenu.style.display==="block"?"none":"block";
+       dMenu.querySelectorAll("div:not([data-value='PRIVATE'])").forEach(it=>{
+          it.onclick=()=>{ currentDept=it.dataset.value; localStorage.setItem("selectedDept",currentDept); dToggle.textContent=it.textContent; dToggle.className="dropdown-toggle "+("dept-text-"+it.dataset.value); dMenu.style.display="none"; updateCalendar(); };
+       });
+       const saved = localStorage.getItem("selectedDept");
+       if(saved && (saved!=="PRIVATE" || userDept==="KEN")) {
+          currentDept = saved;
+          const target = dMenu.querySelector(`div[data-value="${saved}"]`);
+          if(target) { dToggle.textContent=target.textContent; dToggle.className="dropdown-toggle "+("dept-text-"+saved); }
+       }
+    }
+
+    function updateAddDeptBubbles() {
+      const container = document.getElementById("dept-bubbles");
+      container.innerHTML = "";
+      let opts = [];
+      if (userDept === "ALL" || userDept === "KEN") opts = ["ALL", "SG2", "SG3", "SG4", "SG5"];
+      if (userDept === "KEN") opts.push("KEN", "HOLIDAY");
+      if (["SG2", "SG3", "SG4", "SG5"].includes(userDept)) opts = [userDept];
+
+      if (opts.length === 1 && userDept !== "ALL" && userDept !== "KEN") {
+         container.style.display = "none";
+         selectedDeptBubble = opts[0];
+         return;
+      } else {
+         container.style.display = "flex";
+      }
+
+      opts.forEach(d => {
+        const chip = document.createElement("div"); chip.className = "chip";
+        if(d === "HOLIDAY") { chip.textContent = "假日"; chip.classList.add("holiday-chip"); } else { chip.textContent = d; }
+        
+        chip.onclick = () => window.selectDeptBubble(chip, d);
+        container.appendChild(chip);
+      });
+      if(opts.length > 0) { selectedDeptBubble = opts[0]; container.firstChild.classList.add("active"); }
+    }
+
+    async function init() {
+      const { data: { session } } = await supabase.auth.getSession();
+      await handleSession(session);
+      document.getElementById("prevMonth").onclick = () => switchMonth("prev");
+      document.getElementById("nextMonth").onclick = () => switchMonth("next");
+      document.getElementById("todayBtn").onclick = () => {
+         const yt=document.querySelector("#yearDropdown .dropdown-toggle"), mt=document.querySelector("#monthDropdown .dropdown-toggle");
+         yt.textContent=today.getFullYear()+" 年"; yt.dataset.value=today.getFullYear();
+         mt.textContent=(today.getMonth()+1)+" 月"; mt.dataset.value=today.getMonth()+1;
+         updateCalendar();
+      };
+      await updateCalendar();
+    }
+
+    async function switchMonth(dir) {
+       let y = parseInt(document.querySelector("#yearDropdown .dropdown-toggle").dataset.value);
+       let m = parseInt(document.querySelector("#monthDropdown .dropdown-toggle").dataset.value);
+       if(dir==="next"){ if(m<12) m++; else { m=1; y++; } } else { if(m>1) m--; else { m=12; y--; } }
+       document.querySelector("#yearDropdown .dropdown-toggle").textContent=y+" 年"; document.querySelector("#yearDropdown .dropdown-toggle").dataset.value=y;
+       document.querySelector("#monthDropdown .dropdown-toggle").textContent=m+" 月"; document.querySelector("#monthDropdown .dropdown-toggle").dataset.value=m;
+       await updateCalendar();
+    }
+
+    let tsX=0; const cal = document.getElementById("calendar");
+    cal.addEventListener("touchstart", e=>tsX=e.changedTouches[0].screenX);
+    cal.addEventListener("touchend", e=>{ if(Math.abs(e.changedTouches[0].screenX-tsX)>50) e.changedTouches[0].screenX-tsX>0?document.getElementById("prevMonth").click():document.getElementById("nextMonth").click(); });
 
     init();
   </script>
