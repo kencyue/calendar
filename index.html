@@ -10,7 +10,7 @@
     /* === 基礎變數 === */
     :root {
       --primary: #007bff;
-      --holiday-color: #e83e8c; /* 假日專用色 */
+      --holiday-color: #e83e8c;
       --bg-color: #f4f6f9;
       --card-bg: #ffffff;
       --text-color: #333;
@@ -29,23 +29,13 @@
 
     /* === 控制列 (允許換行) === */
     .controls {
-      display: flex;
-      justify-content: center;
-      gap: 6px;
-      margin-bottom: 8px;
-      flex-wrap: wrap; /* ✅ 按鈕列允許換行 */
-      align-items: center;
+      display: flex; justify-content: center; gap: 6px;
+      margin-bottom: 8px; flex-wrap: wrap; align-items: center;
     }
-
     button {
-      background: var(--card-bg);
-      border: 1px solid var(--border-color);
-      padding: 6px 10px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 0.9rem;
-      white-space: nowrap;
-      transition: all 0.2s;
+      background: var(--card-bg); border: 1px solid var(--border-color);
+      padding: 6px 10px; border-radius: 6px; cursor: pointer;
+      font-size: 0.9rem; white-space: nowrap; transition: all 0.2s;
     }
     button:active { background: #e9ecef; transform: scale(0.98); }
     .btn-primary { background: var(--primary); color: white; border: none; }
@@ -54,34 +44,18 @@
     /* === 下拉選單 === */
     .dropdown { position: relative; display: inline-block; }
     .dropdown-toggle {
-      background: var(--card-bg);
-      border: 1px solid var(--border-color);
-      padding: 6px 10px;
-      border-radius: 6px;
-      cursor: pointer;
-      min-width: 70px;
-      text-align: center;
-      white-space: nowrap; 
+      background: var(--card-bg); border: 1px solid var(--border-color);
+      padding: 6px 10px; border-radius: 6px; cursor: pointer;
+      min-width: 70px; text-align: center; white-space: nowrap; 
     }
     .dropdown-menu {
-      display: none;
-      position: absolute;
-      top: 105%; left: 0;
-      background: var(--card-bg);
-      border: 1px solid var(--border-color);
-      box-shadow: var(--shadow);
-      z-index: 1000;
-      min-width: 120px;
-      border-radius: 6px;
-      max-height: 300px;
-      overflow-y: auto;
+      display: none; position: absolute; top: 105%; left: 0;
+      background: var(--card-bg); border: 1px solid var(--border-color);
+      box-shadow: var(--shadow); z-index: 1000;
+      min-width: 120px; border-radius: 6px; max-height: 300px; overflow-y: auto;
     }
-    /* ✅ 下拉選單內容不換行 */
     .dropdown-menu div { 
-      padding: 8px 12px; 
-      cursor: pointer; 
-      border-bottom: 1px solid #eee;
-      white-space: nowrap; 
+      padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #eee; white-space: nowrap; 
     }
     .dropdown-menu div:hover { background: #f8f9fa; }
 
@@ -104,33 +78,18 @@
     
     /* === 月曆主體 === */
     #calendar {
-      display: grid;
-      grid-template-columns: repeat(7, 1fr);
-      gap: 4px;
-      max-width: 800px;
-      margin: 5px auto 0 auto;
+      display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px;
+      max-width: 800px; margin: 5px auto 0 auto;
     }
     .weekday-header {
-      text-align: center;
-      font-weight: bold;
-      padding: 8px 0;
-      background: #e9ecef;
-      border-radius: 4px;
-      font-size: 0.9rem;
+      text-align: center; font-weight: bold; padding: 8px 0;
+      background: #e9ecef; border-radius: 4px; font-size: 0.9rem;
     }
     .day {
-      background: var(--card-bg);
-      min-height: 70px;
-      border: 1px solid var(--border-color);
-      border-radius: 6px;
-      padding: 4px;
-      position: relative;
-      cursor: pointer;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      user-select: none;
-      transition: transform 0.1s;
+      background: var(--card-bg); min-height: 70px;
+      border: 1px solid var(--border-color); border-radius: 6px; padding: 4px;
+      position: relative; cursor: pointer; display: flex; flex-direction: column;
+      align-items: center; user-select: none; transition: transform 0.1s;
     }
     .day:active { transform: scale(0.98); }
     .day.today { border: 2px solid var(--primary); background: #e7f1ff; }
@@ -180,11 +139,16 @@
     .event-item:last-child { border-bottom: none; }
     .event-item span { flex: 1; margin-right: 8px; word-break: break-all; line-height: 1.4; }
     
+    /* 分隔線與新增區塊 */
     .add-section { 
       margin-top: 15px; 
       border-top: 1px solid #ddd;
       padding-top: 15px;
+      display: none; /* 預設隱藏 */
     }
+    .add-btn-container { text-align: center; margin-top: 15px; border-top: 1px solid #f0f0f0; padding-top: 10px; }
+    .add-btn-container button { width: 100%; padding: 8px; font-weight: bold; background: #f8f9fa; }
+
     .add-section textarea, .add-section input[type="time"] {
       width: 100%; margin-bottom: 8px; padding: 8px;
       border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 0.95rem;
@@ -200,17 +164,23 @@
     }
     .chip:hover { background: #eee; }
     .chip.active { background: var(--primary); color: white; border-color: var(--primary); box-shadow: 0 2px 5px rgba(0,123,255,0.3); }
-    
-    /* 假日泡泡特規 */
     .chip.holiday-chip.active { background: var(--holiday-color); border-color: var(--holiday-color); box-shadow: 0 2px 5px rgba(232,62,140,0.3); }
 
-    /* === 列表中的徽章 === */
-    .time-badge, .tag-badge {
+    /* === 列表中的徽章 (Badges) === */
+    .time-badge, .tag-badge, .dept-badge {
       display: inline-block; padding: 1px 6px; border-radius: 4px;
-      font-size: 0.75em; margin-right: 5px; font-family: monospace; vertical-align: middle;
+      font-size: 0.75em; margin-right: 4px; font-family: monospace; vertical-align: middle;
     }
     .time-badge { background: #f0f0f0; color: #555; }
     .tag-badge { background: #e7f5ff; color: #007bff; border: 1px solid #bce3ff; }
+    /* 部門徽章顏色 */
+    .dept-badge { color: #fff; font-weight: normal; }
+    .dept-badge.ALL { background-color: #dc3545; }
+    .dept-badge.SG2 { background-color: #fd7e14; }
+    .dept-badge.SG3 { background-color: #ffc107; color: #333; }
+    .dept-badge.SG4 { background-color: #28a745; }
+    .dept-badge.SG5 { background-color: #007bff; }
+    .dept-badge.KEN { background-color: #6f42c1; }
 
     /* === 時間選擇列 === */
     .time-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
@@ -320,7 +290,6 @@
     window.toggleTagsVisibility = function() {
       const dept = selectedDeptBubble;
       const tagContainer = document.getElementById("tag-container");
-      // 假日、KEN、私人 -> 隱藏標籤
       if (dept === "HOLIDAY" || dept === "KEN" || dept === "PRIVATE") {
         tagContainer.style.display = "none"; selectedTag = "";
         document.querySelectorAll("#tag-container .chip").forEach(c => c.classList.remove("active"));
@@ -367,7 +336,6 @@
         const div = document.createElement("div"); div.className = "event-item";
         const span = document.createElement("span"); span.className = "lunar holiday"; span.textContent = `[假日] ${holiday.description}`;
         
-        // ✅ 修正：只有 KEN 才有權限刪除/編輯假日
         if (userDept === "KEN") {
           span.style.cursor="pointer";
           span.title = "點擊編輯";
@@ -382,17 +350,10 @@
              };
              input.onblur=save; input.onkeydown=e=>{if(e.key==="Enter")save()};
           };
-
-          const btn = document.createElement("button"); 
-          btn.textContent = "刪除";
-          btn.style.marginLeft = "8px";
+          const btn = document.createElement("button"); btn.textContent="刪除"; btn.style.marginLeft="8px";
           btn.onclick = () => window.deleteHoliday(currentDate);
-          
-          div.appendChild(span); 
-          div.appendChild(btn);
-        } else {
-          div.appendChild(span);
-        }
+          div.appendChild(span); div.appendChild(btn);
+        } else div.appendChild(span);
         list.appendChild(div);
       }
 
@@ -403,10 +364,11 @@
         events.forEach(ev => {
           const div = document.createElement("div"); div.className = "event-item";
           
-          let timeHtml = (!ev.isAllDay && ev.startTime) 
-            ? `<span class="time-badge">${ev.startTime.slice(0,5)}${ev.endTime?'~'+ev.endTime.slice(0,5):''}</span>` 
-            : "";
-            
+          let timeHtml = (!ev.isAllDay && ev.startTime) ? `<span class="time-badge">${ev.startTime.slice(0,5)}${ev.endTime?'~'+ev.endTime.slice(0,5):''}</span>` : "";
+          
+          // 🔥 新增：部門徽章
+          let deptHtml = `<span class="dept-badge ${ev.dept}">${ev.dept}</span>`;
+
           let dispDesc = ev.description;
           let tagHtml = "";
           const tags = ["活動", "出差", "會議"];
@@ -418,8 +380,9 @@
             }
           }
 
-          const span = document.createElement("span"); span.className = `dept-${ev.dept}`;
-          span.innerHTML = `${timeHtml}${tagHtml}${dispDesc}`;
+          const span = document.createElement("span"); 
+          span.className = `dept-${ev.dept}`; // 保持文字顏色 fallback
+          span.innerHTML = `${deptHtml}${timeHtml}${tagHtml}${dispDesc}`;
 
           if (canOperateDept(ev.dept)) {
             span.style.cursor = "pointer";
@@ -430,13 +393,11 @@
                  if(input.value && input.value!==ev.description) {
                     await supabase.from("events").update({description:input.value}).eq("id",ev.id);
                     await refreshModal();
-                 } else span.innerHTML = `${timeHtml}${tagHtml}${dispDesc}`;
+                 } else span.innerHTML = `${deptHtml}${timeHtml}${tagHtml}${dispDesc}`;
               };
               input.onblur=save; input.onkeydown=e=>{if(e.key==="Enter")save()};
             };
-            const btn = document.createElement("button"); 
-            btn.textContent = "刪除";
-            btn.style.marginLeft = "8px";
+            const btn = document.createElement("button"); btn.textContent="刪除"; btn.style.marginLeft="8px";
             btn.onclick = () => deleteEvent(ev.id);
             div.appendChild(span); div.appendChild(btn);
           } else div.appendChild(span);
@@ -445,21 +406,37 @@
       }
     }
 
+    // 🔥 介面切換邏輯
+    window.showAddForm = function() {
+      document.getElementById("add-form-container").style.display = "block";
+      document.getElementById("show-add-btn").style.display = "none";
+    }
+    
+    window.hideAddForm = function() {
+      document.getElementById("add-form-container").style.display = "none";
+      document.getElementById("show-add-btn").style.display = "block";
+    }
+
     function openModal(dateStr,events){
       currentDate = dateStr;
       document.getElementById("modal-date").textContent = dateStr;
+      
+      // 重置新增表單
       document.getElementById("new-desc").value = "";
       document.getElementById("is-all-day").checked = true;
       document.getElementById("start-time").value = "";
       document.getElementById("end-time").value = "";
       window.toggleTimeInputs();
-      
       selectedTag = "";
       document.querySelectorAll("#tag-container .chip").forEach(c => c.classList.remove("active"));
       
+      // 🔥 預設顯示列表，隱藏輸入框
+      window.hideAddForm();
+      
       renderModalList(events);
 
-      const addSection = document.querySelector("#modal .add-section");
+      // 檢查是否顯示新增按鈕
+      const addSection = document.querySelector(".add-section");
       if (!userSession || userDept === "NONE") {
         addSection.style.display = "none";
       } else {
@@ -483,11 +460,14 @@
 
       if (!desc) { alert("請輸入描述"); return; }
 
-      // ✅ 修正：假日新增邏輯
+      // ✅ 假日新增邏輯：選了泡泡就直接新增
       if (dept === "HOLIDAY") {
          if (userDept !== "KEN") { alert("權限不足"); return; }
          await supabase.from("holidays").insert([{ date: currentDate, description: desc, is_holiday: true }]);
-         document.getElementById("new-desc").value = ""; await refreshModal(); return;
+         document.getElementById("new-desc").value = ""; 
+         window.hideAddForm(); // 成功後收起
+         await refreshModal(); 
+         return;
       }
 
       if (!isAllDay) {
@@ -511,6 +491,7 @@
       else {
         document.getElementById("new-desc").value = "";
         selectedTag = ""; document.querySelectorAll("#tag-container .chip").forEach(c => c.classList.remove("active"));
+        window.hideAddForm(); // 成功後收起
         await refreshModal();
       }
     }
@@ -522,7 +503,6 @@
       await refreshModal();
     }
     
-    // ✅ 修正：假日刪除全域函式
     window.deleteHoliday = async function(dateStr) {
       if(userDept !== "KEN") { alert("只有 KEN 可以刪除假日"); return; }
       if(!confirm("確定刪除假日?")) return;
@@ -750,24 +730,31 @@
        }
     }
 
-    // ✅ 修正：單一部門只顯示一個泡泡，KEN顯示所有部門+假日
+    // ✅ 修正：單一部門隱藏泡泡選擇，KEN顯示所有+假日
     function updateAddDeptBubbles() {
       const container = document.getElementById("dept-bubbles");
       container.innerHTML = "";
       
       let opts = [];
       if (userDept === "ALL" || userDept === "KEN") opts = ["ALL", "SG2", "SG3", "SG4", "SG5"];
-      if (userDept === "KEN") opts.push("KEN", "HOLIDAY"); // 加入假日選項
+      if (userDept === "KEN") opts.push("KEN", "HOLIDAY");
       
-      // 單一部門帳號
       if (["SG2", "SG3", "SG4", "SG5"].includes(userDept)) {
          opts = [userDept];
+      }
+
+      // 只有單一部門時，隱藏泡泡區塊
+      if (opts.length === 1 && userDept !== "ALL" && userDept !== "KEN") {
+         container.style.display = "none";
+         selectedDeptBubble = opts[0];
+         return;
+      } else {
+         container.style.display = "flex";
       }
 
       opts.forEach(d => {
         const chip = document.createElement("div");
         chip.className = "chip";
-        // 假日泡泡特殊樣式
         if(d === "HOLIDAY") {
            chip.textContent = "假日";
            chip.classList.add("holiday-chip");
@@ -775,14 +762,10 @@
            chip.textContent = d;
         }
         
-        // 只有一個部門時，預設選取並鎖定
-        if(opts.length === 1) chip.classList.add("active", "disabled");
-        
         chip.onclick = () => window.selectDeptBubble(chip, d);
         container.appendChild(chip);
       });
 
-      // 預設選取第一個
       if(opts.length > 0) {
         selectedDeptBubble = opts[0];
         container.firstChild.classList.add("active");
@@ -875,32 +858,38 @@
       <div id="modal-list"></div>
       
       <div class="add-section">
-        <div id="dept-bubbles" class="chip-group"></div>
+        <div id="add-form-container">
+          <div id="dept-bubbles" class="chip-group"></div>
 
-        <div id="tag-container" class="chip-group">
-           <div class="chip" onclick="selectTag(this, '活動')">活動</div>
-           <div class="chip" onclick="selectTag(this, '出差')">出差</div>
-           <div class="chip" onclick="selectTag(this, '會議')">會議</div>
+          <div id="tag-container" class="chip-group">
+             <div class="chip" onclick="selectTag(this, '活動')">活動</div>
+             <div class="chip" onclick="selectTag(this, '出差')">出差</div>
+             <div class="chip" onclick="selectTag(this, '會議')">會議</div>
+          </div>
+
+          <div class="time-row">
+             <label class="switch">
+               <input type="checkbox" id="is-all-day" checked onchange="toggleTimeInputs()"> 
+               <span class="slider"></span>
+             </label>
+             <span style="font-size:0.9rem; margin-left:8px; flex:1;">整天</span>
+             
+             <div id="time-inputs" class="time-inputs hidden" style="display:flex; gap:5px;">
+               <input type="time" id="start-time" style="width:auto; margin:0;"> 
+               <span style="align-self:center;">~</span>
+               <input type="time" id="end-time" style="width:auto; margin:0;">
+             </div>
+          </div>
+
+          <textarea id="new-desc" placeholder="事件描述" rows="3"></textarea>
+          <div class="btn-row" style="display:flex; justify-content:flex-end; gap:10px; margin-top:10px;">
+            <button class="btn-primary" onclick="addEvent()">確認新增</button>
+            <button class="btn-secondary" onclick="window.hideAddForm()">取消</button>
+          </div>
         </div>
-
-        <div class="time-row">
-           <label class="switch">
-             <input type="checkbox" id="is-all-day" checked onchange="toggleTimeInputs()"> 
-             <span class="slider"></span>
-           </label>
-           <span style="font-size:0.9rem; margin-left:8px; flex:1;">整天</span>
-           
-           <div id="time-inputs" class="time-inputs hidden" style="display:flex; gap:5px;">
-             <input type="time" id="start-time" style="width:auto; margin:0;"> 
-             <span style="align-self:center;">~</span>
-             <input type="time" id="end-time" style="width:auto; margin:0;">
-           </div>
-        </div>
-
-        <textarea id="new-desc" placeholder="事件描述" rows="3"></textarea>
-        <div class="btn-row">
-          <button class="btn-primary" onclick="addEvent()">新增事件</button>
-          <button class="btn-secondary" onclick="closeModal()">關閉</button>
+        
+        <div id="show-add-btn" class="add-btn-container">
+           <button onclick="window.showAddForm()" style="color:var(--primary);">+ 新增事件</button>
         </div>
       </div>
     </div>
