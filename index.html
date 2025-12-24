@@ -17,13 +17,13 @@
       --shadow: 0 4px 12px rgba(0,0,0,0.1);
       
       /* 部門顏色 */
-      --color-ALL: #333333; /* 黑 */
-      --color-SG2: #007bff; /* 藍 */
-      --color-SG3: #28a745; /* 綠 */
-      --color-SG4: #6f42c1; /* 紫 */
-      --color-SG5: #fd7e14; /* 橘 */
-      --color-KEN: #e83e8c; /* Pink */
-      --color-HOLIDAY: #dc3545; /* 紅 */
+      --color-ALL: #000000;
+      --color-SG2: #007bff;
+      --color-SG3: #28a745;
+      --color-SG4: #6f42c1;
+      --color-SG5: #fd7e14;
+      --color-KEN: #e83e8c;
+      --color-HOLIDAY: #dc3545;
     }
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -100,10 +100,9 @@
     .day.weekend, .day.holiday { color: var(--color-HOLIDAY); }
     .day.selected-day { background-color: #ffeeba; border-color: #ffc107; }
     
-    /* 🔥 假日文字微調：更小、置中 */
     .lunar { 
-      font-size: 0.55rem; color: #888; margin-top: 2px; 
-      text-align: center; line-height: 1.1; width: 100%; 
+      font-size: 0.65rem; color: #888; margin-top: 2px; 
+      text-align: center; line-height: 1.2; width: 100%; 
     }
     .lunar.holiday { color: var(--color-HOLIDAY); font-weight: bold; }
 
@@ -136,9 +135,8 @@
       padding: 12px 0; border-bottom: 1px solid #f0f0f0; font-size: 0.95rem;
     }
     .event-item:last-child { border-bottom: none; }
-    .event-item-content { flex: 1; margin-right: 8px; word-break: break-all; line-height: 1.6; display: flex; align-items: center; flex-wrap: wrap; cursor: pointer; }
-    .event-item-content:hover { opacity: 0.7; }
-
+    .event-item-content { flex: 1; margin-right: 8px; word-break: break-all; line-height: 1.6; display: flex; align-items: center; flex-wrap: wrap; }
+    
     .add-section { margin-top: 15px; border-top: 1px solid #ddd; padding-top: 15px; display: none; }
     .add-btn-container { text-align: center; margin-top: 15px; border-top: 1px solid #f0f0f0; padding-top: 10px; }
     .add-btn-container button { width: 100%; padding: 12px; font-weight: bold; background: #f8f9fa; font-size: 1rem; }
@@ -154,9 +152,8 @@
       transition: all 0.2s; user-select: none; white-space: nowrap; 
     }
     
-    /* 🔥 動態顏色 Class (修正泡泡顏色) */
-    .chip.active { color: white !important; border-color: transparent; }
-    /* 部門泡泡顏色 */
+    /* 動態顏色 Class */
+    .chip.active { color: white; border-color: transparent; }
     .chip.active.dept-ALL { background: var(--color-ALL); }
     .chip.active.dept-SG2 { background: var(--color-SG2); }
     .chip.active.dept-SG3 { background: var(--color-SG3); }
@@ -194,10 +191,8 @@
     .tag-badge.SG5 { background-color: var(--color-SG5); }
     .tag-badge.KEN { background-color: var(--color-KEN); }
 
-    /* 🔥 修正：時間輸入框寬度縮小，避免擠壓 */
     .time-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px; }
-    .time-row label { display: flex; align-items: center; font-size: 1rem; cursor: pointer; flex-shrink: 0; }
-    .time-inputs input[type="time"] { width: 90px !important; padding: 6px 4px; text-align: center; } /* 變窄 */
+    .time-row label { display: flex; align-items: center; font-size: 1rem; cursor: pointer; }
     .hidden { display: none !important; }
 
     #loading { display: none; text-align: center; padding: 10px; color: #666; }
@@ -214,18 +209,33 @@
     const supabaseKey = "sb_publishable_XEf_IKh9aiU7if2jrNHbmQ_Fvrqvjhd";
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    // 🔥 全域登出函式 (修復手機版登出問題)
     window.logout = async function() {
         if(!confirm("確定要登出嗎？")) return;
-        localStorage.clear(); sessionStorage.clear();
-        try { await supabase.auth.signOut(); } catch(e) { console.log(e); }
-        window.location.href = window.location.pathname + "?t=" + new Date().getTime();
+        
+        // 1. 強制清除本地資料
+        localStorage.clear();
+        sessionStorage.clear();
+        
+        // 2. 嘗試後端登出
+        try { await supabase.auth.signOut(); } catch(e) { console.error(e); }
+        
+        // 3. 暴力跳轉 (防止手機瀏覽器讀取快取)
+        window.location.replace(window.location.pathname + "?t=" + new Date().getTime());
     };
 
+    // 🔥 全域刪除/修改函式 (ID操作)
     window.deleteHolidayById = async function(id) {
       if(!confirm("確定要刪除這個假日嗎？")) return;
       const { error } = await supabase.from("holidays").delete().eq("id", id);
       if (error) alert("刪除失敗: " + error.message);
       else await window.refreshModal();
+    };
+
+    window.updateHolidayById = async function(id, newVal) {
+        if(!newVal) return;
+        const { error } = await supabase.from("holidays").update({description: newVal}).eq("id", id);
+        if(!error) await window.refreshModal();
     };
 
     window.deleteEventById = async function(id) {
@@ -241,9 +251,11 @@
     let userSession = null;
     let userDept = "NONE";
     let isPrivateVisible = localStorage.getItem("showPrivate") === "true";
-    let multiSelectMode = false;
-    let selectedDates = new Set();
     
+    // 🔥 補回這個變數，修復點擊日期錯誤
+    let multiSelectMode = false;
+    
+    let selectedDates = new Set();
     let selectedTag = ""; 
     let selectedDeptBubble = "ALL";
     let isEditingEventId = null;
@@ -318,18 +330,8 @@
 
     window.selectDeptBubble = function(el, dept) {
       if (el.classList.contains("disabled")) return;
-      document.querySelectorAll("#dept-bubbles .chip").forEach(c => {
-          c.classList.remove("active");
-          // 移除所有可能的顏色 class
-          c.className = "chip";
-          if(c.textContent === "假日") c.classList.add("holiday-chip");
-      });
-      
+      document.querySelectorAll("#dept-bubbles .chip").forEach(c => c.classList.remove("active"));
       el.classList.add("active");
-      
-      // 🔥 修正：加上對應顏色 class
-      if(dept !== "HOLIDAY") el.classList.add(`dept-${dept}`);
-      
       selectedDeptBubble = dept;
       
       if(selectedTag) {
@@ -406,26 +408,27 @@
         const contentSpan = document.createElement("span");
         contentSpan.className = "event-item-content";
         contentSpan.innerHTML = `<span class="badge holiday-badge">假日</span><span class="holiday-text">${holiday.description}</span>`;
-        
-        // 🔥 修正：假日點擊即修改
-        if (userDept === "KEN") {
-          contentSpan.title = "點擊編輯";
-          contentSpan.onclick = () => {
-             window.showAddForm(true);
-             const holidayChip = Array.from(document.querySelectorAll("#dept-bubbles .chip")).find(c => c.textContent === "假日");
-             if(holidayChip) window.selectDeptBubble(holidayChip, 'HOLIDAY');
-             document.getElementById("new-desc").value = holiday.description;
-             isEditingEventId = { type: 'holiday', id: holiday.id };
-          };
-        }
-        
         div.appendChild(contentSpan);
 
         if (userDept === "KEN") {
+          const editBtn = document.createElement("button");
+          editBtn.textContent = "✎";
+          editBtn.className = "icon-btn";
+          editBtn.style.color = "#aaa";
+          editBtn.onclick = () => {
+             window.showAddForm(true);
+             const holidayChip = Array.from(document.querySelectorAll("#dept-bubbles .chip")).find(c => c.textContent === "假日");
+             if(holidayChip) holidayChip.click();
+             document.getElementById("new-desc").value = holiday.description;
+             isEditingEventId = { type: 'holiday', id: holiday.id };
+          };
+
           const delBtn = document.createElement("button"); 
           delBtn.textContent = "刪除";
           delBtn.style.marginLeft = "8px";
           delBtn.setAttribute("onclick", `window.deleteHolidayById(${holiday.id}); event.stopPropagation();`);
+          
+          div.appendChild(editBtn);
           div.appendChild(delBtn);
         }
         list.appendChild(div);
@@ -449,10 +452,12 @@
           span.className = `event-item-content dept-text-${ev.dept}`;
           span.innerHTML = `${timeHtml}${deptHtml}${catHtml}${ev.description}`;
 
-          // 🔥 修正：點擊項目即修改
           if (canOperateDept(ev.dept)) {
-            span.title = "點擊編輯";
-            span.onclick = () => {
+            const editBtn = document.createElement("button");
+            editBtn.textContent = "✎";
+            editBtn.className = "icon-btn";
+            editBtn.style.color = "#aaa";
+            editBtn.onclick = () => {
                 window.showAddForm(true);
                 const deptChip = Array.from(document.querySelectorAll("#dept-bubbles .chip")).find(c => c.textContent === ev.dept);
                 if(deptChip) window.selectDeptBubble(deptChip, ev.dept);
@@ -469,15 +474,14 @@
                 document.getElementById("new-desc").value = ev.description;
                 isEditingEventId = { type: 'event', id: ev.id };
             };
-          }
 
-          div.appendChild(span); 
-
-          if (canOperateDept(ev.dept)) {
             const delBtn = document.createElement("button"); delBtn.textContent="刪除"; delBtn.style.marginLeft="8px";
             delBtn.setAttribute("onclick", `window.deleteEventById(${ev.id}); event.stopPropagation();`);
+            
+            div.appendChild(editBtn);
+            div.appendChild(span); 
             div.appendChild(delBtn);
-          }
+          } else div.appendChild(span);
           list.appendChild(div);
         });
       }
@@ -646,6 +650,7 @@
         el.addEventListener("touchstart", () => pressTimer = setTimeout(() => { multiSelectMode=true; toggleSelect(ymd, el); }, 450));
         el.addEventListener("touchend", () => clearTimeout(pressTimer));
         
+        // 🔥🔥 這裡就是之前出錯的地方，現在因為補回了 multiSelectMode 變數，這裡會正常運作
         el.addEventListener("click", () => { 
             if (multiSelectMode) toggleSelect(ymd, el); 
             else openModal(fullDate, events); 
@@ -739,5 +744,253 @@
        const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = "export.ics"; a.click();
        document.getElementById("exportRangeModal").style.display = "none";
     };
+
+    async function login(){
+      const redirectUrl = window.location.origin + window.location.pathname;
+      await supabase.auth.signInWithOAuth({ provider:"google", options:{redirectTo: redirectUrl} });
+    }
+    window.login = login;
+    // 🔥 強力登出函式
+    window.logout = async () => {
+      // 1. 呼叫 Supabase 登出接口
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        console.error("Supabase 登出錯誤:", error.message);
+      }
+
+      // 2. 🔥 核彈級清除：不管 Supabase 有沒有清乾淨，我們手動把瀏覽器緩存全清空
+      localStorage.clear();
+      sessionStorage.clear();
+
+      // 3. 重置變數
+      userSession = null;
+      userDept = "NONE";
+
+      // 4. 更新 UI (不用重整頁面，直接切換顯示)
+      handleSession(null);
+      
+      // 5. 強制跳轉頁面
+      window.location.replace(window.location.pathname + "?t=" + new Date().getTime());
+    };
+
+    async function handleSession(session) {
+      userSession = session; userDept = "NONE";
+      if (session?.user?.email) await checkWhitelist(session.user.email);
+      const label = userDept==="ALL"?"(管理員)":userDept==="NONE"?"(唯讀)":`(${userDept})`;
+      document.getElementById("loginBtn").style.display = session ? "none" : "inline-block";
+      document.getElementById("logoutBtn").style.display = session ? "inline-block" : "none";
+      document.getElementById("user-info").textContent = session ? `${session.user.email} ${label}` : "";
+      initMenus();
+      fetchCategories(); // 🔥 登入後抓類別
+    }
+
+    supabase.auth.onAuthStateChange((evt, session) => {
+       if(evt==='SIGNED_IN' || evt==='TOKEN_REFRESHED') handleSession(session);
+       else if(evt==='SIGNED_OUT') handleSession(null);
+    });
+
+    function initMenus() {
+       const yearDd = document.getElementById("yearDropdown"), yToggle = yearDd.querySelector(".dropdown-toggle"), yMenu = yearDd.querySelector(".dropdown-menu");
+       yMenu.innerHTML=""; const cy = today.getFullYear();
+       for(let y=cy-5; y<=cy+5; y++){
+          const d = document.createElement("div"); d.textContent = y+"年"; d.dataset.value=y;
+          d.onclick=()=>{ yToggle.textContent=d.textContent; yToggle.dataset.value=y; updateCalendar(); yMenu.style.display="none"; };
+          yMenu.appendChild(d);
+       }
+       yToggle.textContent=cy+" 年"; yToggle.dataset.value=cy;
+       yToggle.onclick = () => yMenu.style.display = yMenu.style.display==="block"?"none":"block";
+       
+       const mDd = document.getElementById("monthDropdown"), mToggle = mDd.querySelector(".dropdown-toggle"), mMenu = mDd.querySelector(".dropdown-menu");
+       mToggle.textContent = (today.getMonth()+1)+" 月"; mToggle.dataset.value = today.getMonth()+1;
+       mToggle.onclick = () => mMenu.style.display = mMenu.style.display==="block"?"none":"block";
+       mMenu.querySelectorAll("div").forEach(d=>{ d.onclick=()=>{ mToggle.textContent=d.textContent; mToggle.dataset.value=d.dataset.value; updateCalendar(); mMenu.style.display="none"; } });
+
+       document.addEventListener("click", e => { if(!yearDd.contains(e.target)) yMenu.style.display="none"; if(!mDd.contains(e.target)) mMenu.style.display="none"; if(!document.getElementById("deptDropdown").contains(e.target)) document.querySelector("#deptDropdown .dropdown-menu").style.display="none"; });
+
+       const dDd = document.getElementById("deptDropdown"), dMenu = dDd.querySelector(".dropdown-menu"), dToggle = dDd.querySelector(".dropdown-toggle");
+       const oldP = dMenu.querySelector('[data-value="PRIVATE"]'); if(oldP) oldP.remove();
+       if(userDept==="KEN") {
+          const div = document.createElement("div"); div.className="dept-text-KEN"; div.dataset.value="PRIVATE"; div.textContent="KEN 私人日程";
+          dMenu.appendChild(div);
+          div.onclick=()=>{ currentDept="PRIVATE"; localStorage.setItem("selectedDept","PRIVATE"); dToggle.textContent=div.textContent; dToggle.className="dropdown-toggle dept-text-KEN"; dMenu.style.display="none"; updateCalendar(); };
+          
+          const pToggle = document.getElementById("privateToggle");
+          pToggle.style.display="flex"; 
+          pToggle.innerHTML = `<label class="switch"><input type="checkbox" id="privateCheckbox"><span class="slider"></span></label><span style="margin-left:8px; font-size:0.9rem;">私人</span>`;
+          
+          const ck = document.getElementById("privateCheckbox");
+          ck.checked = isPrivateVisible;
+          ck.onchange = (e)=>{ isPrivateVisible=e.target.checked; localStorage.setItem("showPrivate", isPrivateVisible); updateCalendar(); };
+       }
+
+       dToggle.onclick = () => dMenu.style.display=dMenu.style.display==="block"?"none":"block";
+       dMenu.querySelectorAll("div:not([data-value='PRIVATE'])").forEach(it=>{
+          it.onclick=()=>{ currentDept=it.dataset.value; localStorage.setItem("selectedDept",currentDept); dToggle.textContent=it.textContent; dToggle.className="dropdown-toggle "+("dept-text-"+it.dataset.value); dMenu.style.display="none"; updateCalendar(); };
+       });
+       const saved = localStorage.getItem("selectedDept");
+       if(saved && (saved!=="PRIVATE" || userDept==="KEN")) {
+          currentDept = saved;
+          const target = dMenu.querySelector(`div[data-value="${saved}"]`);
+          if(target) { dToggle.textContent=target.textContent; dToggle.className="dropdown-toggle "+("dept-text-"+saved); }
+       }
+    }
+
+    function updateAddDeptBubbles() {
+      const container = document.getElementById("dept-bubbles");
+      container.innerHTML = "";
+      let opts = [];
+      if (userDept === "ALL" || userDept === "KEN") opts = ["ALL", "SG2", "SG3", "SG4", "SG5"];
+      if (userDept === "KEN") opts.push("KEN", "HOLIDAY");
+      if (["SG2", "SG3", "SG4", "SG5"].includes(userDept)) opts = [userDept];
+
+      if (opts.length === 1 && userDept !== "ALL" && userDept !== "KEN") {
+         container.style.display = "none";
+         selectedDeptBubble = opts[0];
+         return;
+      } else {
+         container.style.display = "flex";
+      }
+
+      opts.forEach(d => {
+        const chip = document.createElement("div"); chip.className = "chip";
+        if(d === "HOLIDAY") { chip.textContent = "假日"; chip.classList.add("holiday-chip"); } else { chip.textContent = d; }
+        
+        chip.onclick = () => window.selectDeptBubble(chip, d);
+        container.appendChild(chip);
+      });
+      if(opts.length > 0) { selectedDeptBubble = opts[0]; container.firstChild.classList.add("active"); }
+    }
+
+    async function init() {
+      const { data: { session } } = await supabase.auth.getSession();
+      await handleSession(session);
+      document.getElementById("prevMonth").onclick = () => switchMonth("prev");
+      document.getElementById("nextMonth").onclick = () => switchMonth("next");
+      document.getElementById("todayBtn").onclick = () => {
+         const yt=document.querySelector("#yearDropdown .dropdown-toggle"), mt=document.querySelector("#monthDropdown .dropdown-toggle");
+         yt.textContent=today.getFullYear()+" 年"; yt.dataset.value=today.getFullYear();
+         mt.textContent=(today.getMonth()+1)+" 月"; mt.dataset.value=today.getMonth()+1;
+         updateCalendar();
+      };
+      await updateCalendar();
+    }
+
+    async function switchMonth(dir) {
+       let y = parseInt(document.querySelector("#yearDropdown .dropdown-toggle").dataset.value);
+       let m = parseInt(document.querySelector("#monthDropdown .dropdown-toggle").dataset.value);
+       if(dir==="next"){ if(m<12) m++; else { m=1; y++; } } else { if(m>1) m--; else { m=12; y--; } }
+       document.querySelector("#yearDropdown .dropdown-toggle").textContent=y+" 年"; document.querySelector("#yearDropdown .dropdown-toggle").dataset.value=y;
+       document.querySelector("#monthDropdown .dropdown-toggle").textContent=m+" 月"; document.querySelector("#monthDropdown .dropdown-toggle").dataset.value=m;
+       await updateCalendar();
+    }
+
+    let tsX=0; const cal = document.getElementById("calendar");
+    cal.addEventListener("touchstart", e=>tsX=e.changedTouches[0].screenX);
+    cal.addEventListener("touchend", e=>{ if(Math.abs(e.changedTouches[0].screenX-tsX)>50) e.changedTouches[0].screenX-tsX>0?document.getElementById("prevMonth").click():document.getElementById("nextMonth").click(); });
+
+    init();
+  </script>
+</head>
+<body>
+  <h2>服務技術中心行事曆</h2>
+
+  <div class="controls">
+    <div id="privateToggle" style="display:none; align-items:center; margin-right:8px;"></div>
+    <button id="todayBtn">今日</button>
+    
+    <div class="dropdown" id="deptDropdown">
+      <div class="dropdown-toggle dept-text-ALL">所有部門</div>
+      <div class="dropdown-menu">
+        <div class="dept-text-ALL" data-value="ALL">所有部門</div>
+        <div class="dept-text-SG2" data-value="SG2">SG2 空調空質</div>
+        <div class="dept-text-SG3" data-value="SG3">SG3 電化商品</div>
+        <div class="dept-text-SG4" data-value="SG4">SG4 視聽商品</div>
+        <div class="dept-text-SG5" data-value="SG5">SG5 教育訓練</div>
+      </div>
+    </div>
+
+    <button id="loginBtn" onclick="login()">登入</button>
+    <button id="logoutBtn" onclick="logout()" style="display:none;">登出</button>
+    <button id="exportRangeBtn">匯出.ics</button>
+    <div id="user-info" style="font-size:0.8rem; align-self:center; white-space: nowrap;"></div>
+  </div>
+
+  <div class="controls">
+    <button id="prevMonth">〈</button>
+    <div class="dropdown" id="yearDropdown"><div class="dropdown-toggle">年份</div><div class="dropdown-menu"></div></div>
+    <div class="dropdown" id="monthDropdown"><div class="dropdown-toggle">月份</div>
+      <div class="dropdown-menu">
+        <div data-value="1">1 月</div><div data-value="2">2 月</div><div data-value="3">3 月</div><div data-value="4">4 月</div>
+        <div data-value="5">5 月</div><div data-value="6">6 月</div><div data-value="7">7 月</div><div data-value="8">8 月</div>
+        <div data-value="9">9 月</div><div data-value="10">10 月</div><div data-value="11">11 月</div><div data-value="12">12 月</div>
+      </div>
+    </div>
+    <button id="nextMonth">〉</button>
+  </div>
+
+  <div id="loading">載入中...</div>
+  <div id="calendar"></div>
+
+  <div id="multiSelectControls" style="text-align:center; margin-top:12px; display:none;">
+    <button id="multiShareBtn" class="btn-primary">分享</button>
+    <button id="clearSelectBtn" class="btn-secondary">取消選取</button>
+  </div>
+
+  <div id="modal" onclick="closeModal(event)">
+    <div class="content">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+        <h3 id="modal-date" style="margin:0;"></h3>
+        <button id="shareBtn" class="icon-btn" onclick="window.shareCurrentDate()">
+           <svg viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg" fill="#555" width="20" height="20"><path d="M15.8,0C17.6,0,19,1.4,19,3.2c0,1.8-1.4,3.2-3.2,3.2c-0.9,0-1.8-0.4-2.4-1.1L7.2,8.8C7.3,9.2,7.4,9.6,7.4,10c0,0.5-0.1,1-0.4,1.5l6,3.7c0.5-1,1.6-1.7,2.8-1.7c1.8,0,3.2,1.4,3.2,3.2c0,1.8-1.4,3.2-3.2,3.2S12.6,18.6,12.6,16.8l0-0.1l-6.5-4c-0.5,0.4-1.2,0.6-1.9,0.6c-1.8,0-3.2-1.4-3.2-3.2s1.4-3.2,3.2-3.2c0.9,0,1.6,0.3,2.2,0.9l6.4-3.5c-0.1-0.3-0.1-0.6-0.1-0.9c0-1.8,1.4-3.2,3.2-3.2z"/></svg>
+        </button>
+      </div>
+      <div id="modal-list"></div>
+      
+      <div class="add-section">
+        <div id="add-form-container">
+          <div id="dept-bubbles" class="chip-group"></div>
+
+          <div id="tag-container" class="chip-group"></div>
+
+          <div class="time-row">
+             <label class="switch">
+               <input type="checkbox" id="is-all-day" checked onchange="toggleTimeInputs()"> 
+               <span class="slider"></span>
+             </label>
+             <span style="font-size:0.9rem; margin-left:8px; flex:1;">整天</span>
+             
+             <div id="time-inputs" class="time-inputs hidden" style="display:flex; gap:5px;">
+               <input type="time" id="start-time" style="width:auto; margin:0;"> 
+               <span style="align-self:center;">~</span>
+               <input type="time" id="end-time" style="width:auto; margin:0;">
+             </div>
+          </div>
+
+          <textarea id="new-desc" placeholder="事件描述" rows="3"></textarea>
+          <div class="btn-row" style="display:flex; justify-content:flex-end; gap:10px; margin-top:10px;">
+            <button id="confirm-btn" class="btn-primary" onclick="addEvent()">確認新增</button>
+            <button class="btn-secondary" onclick="window.hideAddForm()">取消</button>
+          </div>
+        </div>
+        
+        <div id="show-add-btn" class="add-btn-container">
+           <button onclick="window.showAddForm()" style="color:var(--primary);">+ 新增事件</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="exportRangeModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:3000; align-items:center; justify-content:center;">
+    <div style="background:#fff; padding:20px; border-radius:8px; width:280px; text-align:center;">
+      <h3>匯出 ICS</h3>
+      <div style="margin:10px 0;">開始：<input type="date" id="exportStart" style="width:100%;"></div>
+      <div style="margin:10px 0;">結束：<input type="date" id="exportEnd" style="width:100%;"></div>
+      <div style="margin-top:15px; display:flex; gap:10px; justify-content:center;">
+        <button id="confirmExportRange" class="btn-primary">匯出</button>
+        <button onclick="document.getElementById('exportRangeModal').style.display='none'" class="btn-secondary">取消</button>
+      </div>
+    </div>
+  </div>
 </body>
 </html>
