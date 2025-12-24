@@ -7,7 +7,6 @@
   <script src="https://cdn.jsdelivr.net/npm/lunar-javascript@1.6.6/lunar.min.js"></script>
   
   <style>
-    /* === 基礎變數 === */
     :root {
       --primary: #007bff;
       --bg-color: #f4f6f9;
@@ -35,7 +34,6 @@
     }
     h2 { text-align: center; margin: 10px 0 15px 0; font-size: 1.5rem; }
 
-    /* === 控制列 === */
     .controls {
       display: flex; justify-content: center; gap: 6px;
       margin-bottom: 8px; flex-wrap: wrap; align-items: center;
@@ -49,7 +47,6 @@
     .btn-primary { background: var(--primary); color: white; border: none; }
     .btn-secondary { background: #6c757d; color: white; border: none; }
     
-    /* === 下拉選單 === */
     .dropdown { position: relative; display: inline-block; }
     .dropdown-toggle {
       background: var(--card-bg); border: 1px solid var(--border-color);
@@ -72,7 +69,6 @@
     .dept-text-SG5 { color: var(--color-SG5); font-weight: 700; }
     .dept-text-KEN { color: var(--color-KEN); font-weight: 700; }
 
-    /* === 滑動開關 === */
     .switch { position: relative; display: inline-block; width: 40px; height: 22px; vertical-align: middle; }
     .switch input { opacity: 0; width: 0; height: 0; }
     .slider { position: absolute; cursor: pointer; inset: 0; background-color: #ccc; transition: .4s; border-radius: 34px; }
@@ -80,7 +76,6 @@
     input:checked + .slider { background-color: var(--primary); }
     input:checked + .slider:before { transform: translateX(18px); }
     
-    /* === 月曆主體 === */
     #calendar {
       display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px;
       max-width: 800px; margin: 5px auto 0 auto;
@@ -100,7 +95,6 @@
     .lunar { font-size: 0.7rem; color: #888; margin-top: 2px; }
     .lunar.holiday { color: var(--color-HOLIDAY); font-weight: bold; }
 
-    /* === 事件點點 === */
     .event-dots { display: flex; gap: 3px; margin-top: 4px; flex-wrap: wrap; justify-content: center; }
     .dot { width: 6px; height: 6px; border-radius: 50%; }
     .dot.ALL { background: var(--color-ALL); }
@@ -110,7 +104,6 @@
     .dot.SG5 { background: var(--color-SG5); }
     .dot.KEN { background: var(--color-KEN); }
 
-    /* === 彈窗 (Modal) === */
     #modal {
       display: none; position: fixed; inset: 0;
       background: rgba(0,0,0,0.4); backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px);
@@ -149,7 +142,6 @@
     .chip.active { background: var(--primary); color: white; border-color: var(--primary); box-shadow: 0 2px 5px rgba(0,123,255,0.3); }
     .chip.holiday-chip.active { background: var(--color-HOLIDAY); border-color: var(--color-HOLIDAY); box-shadow: 0 2px 5px rgba(220,53,69,0.3); }
 
-    /* === 徽章 === */
     .badge {
       display: inline-flex; align-items: center; justify-content: center;
       padding: 2px 8px; border-radius: 12px;
@@ -186,9 +178,7 @@
     import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
     
     const supabaseUrl = "https://uiewxojtldhebydjmczh.supabase.co";
-    // 🔥 你的 Key
     const supabaseKey = "sb_publishable_XEf_IKh9aiU7if2jrNHbmQ_Fvrqvjhd";
-    
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const today = new Date();
@@ -212,6 +202,25 @@
       return{start,end};
     }
 
+    // 🔥 全域刪除函式 (確保按鈕一定找得到)
+    window.deleteHolidayById = async function(id) {
+      if(!confirm("確定要刪除這個假日嗎？")) return;
+      console.log("正在刪除假日 ID:", id);
+      const { error } = await supabase.from("holidays").delete().eq("id", id);
+      if (error) {
+        alert("刪除失敗: " + error.message);
+      } else {
+        await refreshModal();
+      }
+    };
+
+    window.updateHolidayById = async function(id, newVal) {
+        if(!newVal) return;
+        console.log("更新假日 ID:", id, newVal);
+        const { error } = await supabase.from("holidays").update({description: newVal}).eq("id", id);
+        if(!error) await refreshModal();
+    }
+
     async function checkWhitelist(email) {
       try {
         const { data, error } = await supabase.from("allowed_users").select("email, dept").eq("email", email).maybeSingle();
@@ -229,7 +238,7 @@
       const {start,end} = ymdRange(year,month);
       
       const hq = await supabase.from("holidays").select("*").gte("date",start).lt("date",end).order("date");
-      // 🔥 確保抓到 ID
+      // 🔥 確保有 ID
       holidayList = (hq.data||[]).map(r=>({ 
         id: r.id, 
         date: ymdToCompact(r.date), 
@@ -300,7 +309,8 @@
       }
     }
 
-    async function refreshModal() {
+    // 讓 refreshModal 也可以全域存取
+    window.refreshModal = async function() {
       if(!currentDate) return;
       const y=parseInt(currentDate.split("-")[0]), m=parseInt(currentDate.split("-")[1]);
       await fetchMonthData(y, m);
@@ -322,7 +332,10 @@
       const ymd = currentDate.replaceAll("-","");
       const holiday = getHoliday(ymd);
       
-      // 🔥 假日渲染邏輯
+      // 除錯用
+      if(holiday) console.log("渲染假日:", holiday);
+
+      // 🔥 假日渲染
       if (holiday) {
         const div = document.createElement("div"); div.className = "event-item";
         
@@ -334,47 +347,23 @@
         if (userDept === "KEN") {
           contentSpan.style.cursor="pointer";
           contentSpan.title = "點擊編輯";
-          
-          // 🔥 編輯假日 (直接綁定)
           contentSpan.onclick = () => {
              const input = document.createElement("input"); 
-             input.value = holiday.description; 
-             input.style.width="70%";
-             contentSpan.innerHTML = ""; 
-             contentSpan.appendChild(input); 
-             input.focus();
+             input.value = holiday.description; input.style.width="70%";
+             contentSpan.innerHTML = ""; contentSpan.appendChild(input); input.focus();
              
-             let isSaving = false;
-             const save = async () => {
-                if(isSaving) return; 
-                isSaving = true;
-                const val = input.value.trim();
-                if(val && val !== holiday.description) {
-                   // 使用 ID 更新
-                   await supabase.from("holidays").update({description:val}).eq("id", holiday.id);
-                   await refreshModal();
-                } else {
-                   contentSpan.innerHTML = `<span class="badge holiday-badge">假日</span><span class="holiday-text">${holiday.description}</span>`;
-                }
-             };
-             input.onblur = save; 
-             input.onkeydown = e => { if(e.key==="Enter") save(); };
+             input.onblur = () => window.updateHolidayById(holiday.id, input.value.trim());
+             input.onkeydown = e => { if(e.key==="Enter") window.updateHolidayById(holiday.id, input.value.trim()); };
           };
 
           const btn = document.createElement("button"); 
           btn.textContent = "刪除";
           btn.style.marginLeft = "8px";
-          
-          // 🔥 刪除假日 (直接綁定 addEventListener，不依賴 window)
-          btn.addEventListener("click", async (e) => {
-             console.log("嘗試刪除假日 ID:", holiday.id); // 除錯用
+          // 🔥 終極解法：使用 function 直接呼叫 global
+          btn.onclick = function(e) {
              e.stopPropagation();
-             if(!confirm("確定要刪除這個假日嗎？")) return;
-             const { error } = await supabase.from("holidays").delete().eq("id", holiday.id);
-             if(error) alert("刪除失敗: " + error.message);
-             else await refreshModal();
-          });
-          
+             window.deleteHolidayById(holiday.id);
+          };
           div.appendChild(btn);
         }
         list.appendChild(div);
@@ -387,9 +376,7 @@
         events.forEach(ev => {
           const div = document.createElement("div"); div.className = "event-item";
           
-          // 時間泡泡
           let timeHtml = (!ev.isAllDay && ev.startTime) ? `<span class="badge time-badge">${ev.startTime.slice(0,5)}${ev.endTime?'~'+ev.endTime.slice(0,5):''}</span>` : "";
-          // 部門泡泡
           let deptHtml = `<span class="badge dept-badge ${ev.dept}">${ev.dept}</span>`;
 
           let dispDesc = ev.description;
@@ -405,49 +392,32 @@
 
           const span = document.createElement("span"); 
           span.className = `event-item-content dept-text-${ev.dept}`;
-          span.innerHTML = `${timeHtml}${deptHtml}${tagHtml}${dispDesc}`; // 順序：時間 > 部門 > 類別 > 內容
+          span.innerHTML = `${timeHtml}${deptHtml}${tagHtml}${dispDesc}`;
 
           if (canOperateDept(ev.dept)) {
             span.style.cursor = "pointer";
-            
-            // 🔥 編輯事件 (直接綁定)
             span.onclick = () => {
-              const input = document.createElement("input"); 
-              input.value = ev.description; 
-              input.style.width = "80%";
-              span.innerHTML=""; 
-              span.appendChild(input); 
-              input.focus();
+              const input = document.createElement("input"); input.value = ev.description; input.style.width = "80%";
+              span.innerHTML=""; span.appendChild(input); input.focus();
               
               let isSaving = false;
               const save = async () => {
-                 if(isSaving) return; 
-                 isSaving = true;
+                 if(isSaving) return; isSaving = true;
                  const val = input.value.trim();
                  if(val && val !== ev.description) {
-                    await supabase.from("events").update({description:val}).eq("id", ev.id);
-                    await refreshModal();
-                 } else {
-                    span.innerHTML = `${timeHtml}${deptHtml}${tagHtml}${dispDesc}`;
-                 }
+                    await supabase.from("events").update({description:val}).eq("id",ev.id);
+                    await window.refreshModal();
+                 } else span.innerHTML = `${timeHtml}${deptHtml}${tagHtml}${dispDesc}`;
               };
-              input.onblur = save; 
-              input.onkeydown = e => { if(e.key==="Enter") save(); };
+              input.onblur=save; input.onkeydown=e=>{if(e.key==="Enter")save()};
             };
-
-            const btn = document.createElement("button"); 
-            btn.textContent = "刪除"; 
-            btn.style.marginLeft = "8px";
-            
-            // 🔥 刪除事件 (直接綁定)
-            btn.addEventListener("click", async (e) => {
+            const btn = document.createElement("button"); btn.textContent="刪除"; btn.style.marginLeft="8px";
+            // 這裡也改用 function
+            btn.onclick = function(e) {
                 e.stopPropagation();
                 if(!confirm("確定刪除?")) return;
-                const { error } = await supabase.from("events").delete().eq("id", ev.id);
-                if(error) alert("失敗:" + error.message);
-                else await refreshModal();
-            });
-            
+                supabase.from("events").delete().eq("id", ev.id).then(() => window.refreshModal());
+            };
             div.appendChild(span); div.appendChild(btn);
           } else div.appendChild(span);
           list.appendChild(div);
@@ -455,7 +425,6 @@
       }
     }
 
-    // 介面切換
     window.showAddForm = function() {
       document.getElementById("add-form-container").style.display = "block";
       document.getElementById("show-add-btn").style.display = "none";
@@ -510,7 +479,7 @@
          await supabase.from("holidays").insert([{ date: currentDate, description: desc, is_holiday: true }]);
          document.getElementById("new-desc").value = ""; 
          window.hideAddForm(); 
-         await refreshModal(); 
+         await window.refreshModal(); 
          return;
       }
 
@@ -536,7 +505,7 @@
         document.getElementById("new-desc").value = "";
         selectedTag = ""; document.querySelectorAll("#tag-container .chip").forEach(c => c.classList.remove("active"));
         window.hideAddForm();
-        await refreshModal();
+        await window.refreshModal();
       }
     }
     window.addEvent = addEvent;
