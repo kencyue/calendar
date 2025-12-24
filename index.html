@@ -1,0 +1,1073 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>服務技術中心行事曆</title>
+  <script src="https://cdn.jsdelivr.net/npm/lunar-javascript@1.6.6/lunar.min.js"></script>
+  
+  <style>
+    /* === 全域與基礎樣式 === */
+    :root {
+      --primary: #007bff;
+      --bg-color: #f4f6f9;
+      --card-bg: #ffffff;
+      --text-color: #333;
+      --border-color: #ddd;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      margin: 0;
+      padding: 10px;
+      padding-bottom: 80px; /* 手機版底部留白 */
+    }
+    h2 { text-align: center; margin: 10px 0; font-size: 1.5rem; }
+
+    /* === 控制列與按鈕 === */
+    .controls {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+    button {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: background 0.2s;
+    }
+    button:active { background: #e9ecef; }
+    .btn-primary { background: var(--primary); color: white; border: none; }
+    .btn-secondary { background: #6c757d; color: white; border: none; }
+    
+    /* === 下拉選單 === */
+    .dropdown { position: relative; display: inline-block; }
+    .dropdown-toggle {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      min-width: 80px;
+      text-align: center;
+    }
+    .dropdown-menu {
+      display: none;
+      position: absolute;
+      top: 100%; left: 0;
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      z-index: 1000;
+      min-width: 120px;
+      border-radius: 6px;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    .dropdown-menu div {
+      padding: 8px 12px;
+      cursor: pointer;
+      border-bottom: 1px solid #eee;
+    }
+    .dropdown-menu div:hover { background: #f8f9fa; }
+
+    /* === 月曆主體 === */
+    #calendar {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 4px;
+      max-width: 800px;
+      margin: 0 auto;
+      transition: transform 0.3s ease, opacity 0.3s ease;
+    }
+    .weekday-header {
+      text-align: center;
+      font-weight: bold;
+      padding: 8px 0;
+      background: #e9ecef;
+      border-radius: 4px;
+      font-size: 0.9rem;
+    }
+    .day {
+      background: var(--card-bg);
+      min-height: 70px; /* 手機版高度 */
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 4px;
+      position: relative;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      user-select: none; /* 防止長按選取文字 */
+    }
+    .day.today { border: 2px solid var(--primary); background: #e7f1ff; }
+    .day.weekend { color: #dc3545; }
+    .day.selected-day { background-color: #ffeeba; border-color: #ffc107; }
+    
+    .lunar { font-size: 0.7rem; color: #888; margin-top: 2px; text-align: center; line-height: 1.1; }
+    .lunar.holiday { color: #dc3545; font-weight: bold; }
+
+    /* === 事件點點 === */
+    .event-dots {
+      display: flex;
+      gap: 3px;
+      margin-top: 4px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .dot { width: 6px; height: 6px; border-radius: 50%; }
+
+    /* === 部門顏色定義 === */
+    .dept-ALL { color: #dc3545; background: #dc3545; } /* 紅 */
+    .dept-SG2 { color: #fd7e14; background: #fd7e14; } /* 橘 */
+    .dept-SG3 { color: #ffc107; background: #ffc107; } /* 黃 */
+    .dept-SG4 { color: #28a745; background: #28a745; } /* 綠 */
+    .dept-SG5 { color: #007bff; background: #007bff; } /* 藍 */
+    .dept-KEN { color: #6f42c1; background: #6f42c1; } /* 紫 */
+    .dot.ALL { background: #dc3545; }
+    .dot.SG2 { background: #fd7e14; }
+    .dot.SG3 { background: #ffc107; }
+    .dot.SG4 { background: #28a745; }
+    .dot.SG5 { background: #007bff; }
+    .dot.KEN { background: #6f42c1; }
+    
+    /* 下拉選單顏色 */
+    .dropdown-menu .dept-SG2 { color: #fd7e14; }
+    .dropdown-menu .dept-SG3 { color: #ffc107; }
+    .dropdown-menu .dept-SG4 { color: #28a745; }
+    .dropdown-menu .dept-SG5 { color: #007bff; }
+    .dropdown-menu .dept-KEN { color: #6f42c1; }
+
+    /* === 彈窗 (Modal) === */
+    #modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 2000;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+    .content {
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      width: 100%;
+      max-width: 400px;
+      max-height: 85vh;
+      overflow-y: auto;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    }
+    .event-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px solid #eee;
+      font-size: 0.95rem;
+    }
+    .event-item span { flex: 1; word-break: break-all; margin-right: 8px; }
+    
+    /* 新增區塊樣式 */
+    .add-section { margin-top: 15px; }
+    .add-section select, .add-section textarea, .add-section input[type="time"] {
+      width: 100%;
+      margin-bottom: 8px;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      box-sizing: border-box;
+    }
+    .btn-row { display: flex; gap: 10px; justify-content: flex-end; margin-top: 8px; }
+
+    /* === 新增：標籤泡泡與時間樣式 === */
+    .tag-container {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+    .tag-chip {
+      padding: 4px 10px;
+      border: 1px solid #ddd;
+      border-radius: 16px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      background: #f8f9fa;
+      color: #555;
+      transition: all 0.2s;
+    }
+    .tag-chip.active {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+    .time-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+      font-size: 0.9rem;
+    }
+    .time-inputs {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .time-badge {
+      background: #eee;
+      color: #555;
+      padding: 1px 5px;
+      border-radius: 4px;
+      font-size: 0.75em;
+      margin-right: 5px;
+      font-family: monospace;
+      white-space: nowrap;
+    }
+    .hidden { display: none !important; }
+
+    /* === 工具與動畫 === */
+    #loading { display: none; text-align: center; padding: 10px; color: #666; }
+    #month-title { text-align: center; font-size: 1.2rem; margin: 10px 0; font-weight: bold; }
+    
+    /* 滑動動畫 class */
+    .slide-left { transform: translateX(-20px); opacity: 0; }
+    .slide-right { transform: translateX(20px); opacity: 0; }
+    .fade-in-left { animation: fadeInLeft 0.3s; }
+    .fade-in-right { animation: fadeInRight 0.3s; }
+    
+    @keyframes fadeInLeft { from { transform: translateX(-20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+    @keyframes fadeInRight { from { transform: translateX(20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+    /* 懸浮提示 (桌機) */
+    .hover-tooltip {
+      position: absolute;
+      background: rgba(0,0,0,0.85);
+      color: #fff;
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      z-index: 3000;
+      pointer-events: none;
+      white-space: pre-wrap;
+      max-width: 200px;
+    }
+    .icon-btn { background: none; border: none; padding: 0; cursor: pointer; }
+
+    /* 大螢幕微調 */
+    @media (min-width: 768px) {
+      .day { min-height: 100px; padding: 8px; }
+      #calendar { gap: 8px; }
+    }
+  </style>
+  
+  <script type="module">
+    import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+    
+    // 🔥 請確認此處為你的專案 URL 和 Key
+    const supabaseUrl = "https://uiewxojtldhebydjmczh.supabase.co";
+    const supabaseKey = "sb_publishable_XEf_IKh9aiU7if2jrNHbmQ_Fvrqvjhd";
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    const today = new Date();
+    let deptEvents = {}, holidayList = [];
+    let currentDept = "ALL", currentDate = null;
+    let userSession = null;
+    let userDept = "NONE";
+    let isPrivateVisible = localStorage.getItem("showPrivate") === "true";
+    let multiSelectMode = false;
+    let selectedDates = new Set();
+    let selectedTag = ""; // 紀錄目前選擇的泡泡
+
+    // --- 工具函式 ---
+    function pad2(n){return String(n).padStart(2,"0");}
+    function ymdToCompact(d){return d.replaceAll("-","");} // 2025-12-01 -> 20251201
+    function ymdRange(year,month){
+      const start=`${year}-${pad2(month)}-01`;
+      const endDate=new Date(year,month,1);
+      const end=`${endDate.getFullYear()}-${pad2(endDate.getMonth()+1)}-01`;
+      return{start,end};
+    }
+
+    // --- 資料存取 ---
+    async function checkWhitelist(email) {
+      const { data } = await supabase.from("allowed_users").select("email, dept").eq("email", email).maybeSingle();
+      if (data) {
+        userDept = data.dept || "NONE";
+        return true;
+      }
+      // 不存在則自動加入為 NONE
+      await supabase.from("allowed_users").insert([{ email, dept: "NONE" }]);
+      userDept = "NONE";
+      return false;
+    }
+
+    async function fetchMonthData(year,month){
+      const {start,end} = ymdRange(year,month);
+      
+      // 抓假日
+      const hq = await supabase.from("holidays")
+        .select("date,description,is_holiday")
+        .gte("date",start).lt("date",end).order("date");
+      holidayList = (hq.data||[]).map(r=>({
+        date: ymdToCompact(r.date),
+        description: r.description,
+        isHoliday: r.is_holiday
+      }));
+
+      // 抓事件 (包含時間欄位)
+      const eq = await supabase.from("events")
+        .select("id,date,dept,description,start_time,end_time,is_all_day")
+        .gte("date",start).lt("date",end)
+        .order("date");
+
+      const events = (eq.data||[]).map(r=>({
+        id: r.id,
+        date: ymdToCompact(r.date),
+        dept: r.dept,
+        description: r.description,
+        startTime: r.start_time,
+        endTime: r.end_time,
+        isAllDay: r.is_all_day
+      }));
+
+      deptEvents = { ALL: [], SG2: [], SG3: [], SG4: [], SG5: [], KEN: [] };
+      for(const ev of events) if(deptEvents[ev.dept]) deptEvents[ev.dept].push(ev);
+    }
+
+    function getHoliday(dateStr){ return holidayList.find(h=>h.date===dateStr); }
+
+    function canOperateDept(dept){
+      if (["ALL", "KEN"].includes(userDept)) return true;
+      if (userDept === "NONE") return false;
+      return userDept === dept;
+    }
+
+    // --- UI 互動邏輯: 標籤與時間 ---
+    window.toggleTimeInputs = function() {
+      const isAllDay = document.getElementById("is-all-day").checked;
+      const inputs = document.getElementById("time-inputs");
+      if (isAllDay) inputs.classList.add("hidden");
+      else inputs.classList.remove("hidden");
+    }
+
+    window.selectTag = function(el, tag) {
+      if (el.classList.contains("active")) {
+        el.classList.remove("active");
+        selectedTag = "";
+      } else {
+        document.querySelectorAll(".tag-chip").forEach(c => c.classList.remove("active"));
+        el.classList.add("active");
+        selectedTag = tag;
+      }
+    }
+
+    window.toggleTagsVisibility = function() {
+      const dept = document.getElementById("new-dept").value;
+      const tagContainer = document.getElementById("tag-container");
+      // KEN 或 私人行程不顯示標籤
+      if (dept === "KEN" || dept === "PRIVATE") {
+        tagContainer.style.display = "none";
+        selectedTag = "";
+        document.querySelectorAll(".tag-chip").forEach(c => c.classList.remove("active"));
+      } else {
+        tagContainer.style.display = "flex";
+      }
+    }
+
+    // --- Modal 開啟與渲染 ---
+    function openModal(dateStr,events){
+      currentDate = dateStr;
+      document.getElementById("modal-date").textContent = dateStr;
+      const list = document.getElementById("modal-list");
+      list.innerHTML = "";
+
+      // 重置新增表單
+      document.getElementById("new-desc").value = "";
+      document.getElementById("is-all-day").checked = true;
+      document.getElementById("start-time").value = "";
+      document.getElementById("end-time").value = "";
+      window.toggleTimeInputs();
+      
+      selectedTag = "";
+      document.querySelectorAll(".tag-chip").forEach(c => c.classList.remove("active"));
+      window.toggleTagsVisibility(); // 初始化標籤顯示狀態
+
+      // 渲染假日
+      const holiday = getHoliday(dateStr.replaceAll("-",""));
+      if (holiday) {
+        const div = document.createElement("div");
+        div.className = "event-item";
+        const span = document.createElement("span");
+        span.className = "lunar holiday";
+        span.textContent = `[假日] ${holiday.description}`;
+        
+        // 假日編輯 (ALL/KEN)
+        if (["ALL", "KEN"].includes(userDept)) {
+          span.style.cursor = "pointer";
+          span.onclick = () => {
+             const input = document.createElement("input");
+             input.type = "text"; input.value = holiday.description; input.style.width="80%";
+             span.replaceWith(input); input.focus();
+             const save = async () => {
+                const val = input.value.trim();
+                if(val && val !== holiday.description) {
+                   await supabase.from("holidays").update({description:val}).eq("date",dateStr);
+                   holiday.description = val;
+                   span.textContent = `[假日] ${val}`;
+                }
+                input.replaceWith(span);
+             };
+             input.addEventListener("blur", save);
+             input.addEventListener("keydown", e=>{if(e.key==="Enter") save();});
+          };
+          const btn = document.createElement("button");
+          btn.textContent = "刪除";
+          btn.onclick = () => deleteHoliday(dateStr);
+          div.appendChild(span); div.appendChild(btn);
+        } else {
+          div.appendChild(span);
+        }
+        list.appendChild(div);
+      }
+
+      // 渲染事件 (排序: 有時間的先 -> 無時間的後)
+      if(events.length===0){
+        const div = document.createElement("div");
+        div.className = "event-item";
+        div.innerHTML = "<span>(無事件)</span>";
+        list.appendChild(div);
+      } else {
+        events.sort((a,b) => {
+           if(a.isAllDay && !b.isAllDay) return 1;
+           if(!a.isAllDay && b.isAllDay) return -1;
+           if(!a.isAllDay && !b.isAllDay) return (a.startTime||"").localeCompare(b.startTime||"");
+           return 0;
+        });
+
+        events.forEach(ev => {
+          const div = document.createElement("div");
+          div.className = "event-item";
+          
+          let timeHtml = "";
+          if (!ev.isAllDay && ev.startTime) {
+             const s = ev.startTime.slice(0,5);
+             const e = ev.endTime ? ev.endTime.slice(0,5) : "";
+             timeHtml = `<span class="time-badge">${s}${e?'~'+e:''}</span>`;
+          }
+
+          const span = document.createElement("span");
+          span.className = `dept-${ev.dept}`;
+          span.innerHTML = `${timeHtml}[${ev.dept}] ${ev.description}`;
+
+          // 事件編輯 (簡易版: 僅改文字)
+          if (canOperateDept(ev.dept)) {
+            span.style.cursor = "pointer";
+            span.onclick = () => {
+              const input = document.createElement("input");
+              input.type = "text"; input.value = ev.description; input.style.width = "80%";
+              span.innerHTML = ""; span.appendChild(input); input.focus();
+              const save = async () => {
+                 const val = input.value.trim();
+                 if(val && val !== ev.description) {
+                    const {error} = await supabase.from("events").update({description:val}).eq("id",ev.id);
+                    if(!error) { ev.description = val; span.innerHTML = `${timeHtml}[${ev.dept}] ${val}`; }
+                 } else { span.innerHTML = `${timeHtml}[${ev.dept}] ${ev.description}`; }
+              };
+              input.addEventListener("blur", save);
+              input.addEventListener("keydown", e=>{if(e.key==="Enter") save();});
+            };
+            const btn = document.createElement("button");
+            btn.textContent = "刪除";
+            btn.onclick = () => deleteEvent(ev.id);
+            div.appendChild(span); div.appendChild(btn);
+          } else {
+            div.appendChild(span);
+          }
+          list.appendChild(div);
+        });
+      }
+
+      // 顯示新增區塊判斷
+      const addSection = document.querySelector("#modal .add-section");
+      if (!userSession || userDept === "NONE") {
+        addSection.style.display = "none";
+      } else {
+        addSection.style.display = "block";
+        updateAddDeptOptions();
+        window.toggleTagsVisibility(); // 再次確保正確
+      }
+      document.getElementById("modal").style.display="flex";
+    }
+
+    function closeModal(e){
+      if(!e || e.target.id==="modal" || !e.target) document.getElementById("modal").style.display="none";
+    }
+    window.closeModal = closeModal;
+
+    // --- 新增事件邏輯 ---
+    async function addEvent() {
+      let desc = document.getElementById("new-desc").value.trim();
+      const dept = document.getElementById("new-dept").value;
+      const isAllDay = document.getElementById("is-all-day").checked;
+      let startTime = null, endTime = null;
+
+      if (!isAllDay) {
+         startTime = document.getElementById("start-time").value;
+         endTime = document.getElementById("end-time").value;
+         if (!startTime) { alert("請輸入開始時間"); return; }
+         if (endTime && startTime > endTime) { alert("結束時間錯誤"); return; }
+      }
+
+      if (!desc) { alert("請輸入描述"); return; }
+      if (userDept === "NONE") { alert("無權限"); return; }
+
+      // 特殊: 新增假日
+      if (["ALL", "KEN"].includes(userDept) && dept === "ALL" && /^h.*h$/i.test(desc)) {
+         const hName = desc.slice(1, -1).trim();
+         const { error } = await supabase.from("holidays").insert([{ date: currentDate, description: hName, is_holiday: true }]);
+         if (error) alert("失敗:"+error.message); else { alert("已新增假日"); await updateCalendar(); }
+         return;
+      }
+
+      if (userDept !== "ALL" && userDept !== "KEN" && userDept !== dept) {
+        alert("只能操作自己部門"); return;
+      }
+
+      // 自動加上泡泡 (如果是 KEN 或 PRIVATE 則忽略)
+      if (selectedTag && dept !== "KEN" && dept !== "PRIVATE") {
+         desc = `[${selectedTag}] ${desc}`;
+      }
+
+      const payload = {
+        date: currentDate,
+        dept,
+        description: desc,
+        is_all_day: isAllDay,
+        start_time: startTime || null,
+        end_time: endTime || null
+      };
+
+      const { error } = await supabase.from("events").insert([payload]);
+      if (error) alert("失敗:"+error.message);
+      else {
+        document.getElementById("new-desc").value = "";
+        selectedTag = "";
+        document.querySelectorAll(".tag-chip").forEach(c => c.classList.remove("active"));
+        await updateCalendar();
+      }
+    }
+    window.addEvent = addEvent;
+
+    // --- 刪除事件 ---
+    window.deleteEvent = async function(id){
+      if(userDept==="NONE") return;
+      const {data} = await supabase.from("events").select("dept").eq("id",id).maybeSingle();
+      if(!data) return;
+      if(!["ALL","KEN"].includes(userDept) && userDept!==data.dept) { alert("無權限"); return; }
+      const {error} = await supabase.from("events").delete().eq("id",id);
+      if(!error) await updateCalendar();
+    }
+
+    window.deleteHoliday = async function(dateStr) {
+      if(!["ALL","KEN"].includes(userDept)) return;
+      if(!confirm(`刪除 ${dateStr} 假日?`)) return;
+      const {error} = await supabase.from("holidays").delete().eq("date",dateStr);
+      if(!error) await updateCalendar();
+    }
+
+    // --- 月曆繪製 ---
+    async function updateCalendar() {
+      document.getElementById("loading").style.display = "block";
+      const year = parseInt(document.querySelector("#yearDropdown .dropdown-toggle").dataset.value);
+      const month = parseInt(document.querySelector("#monthDropdown .dropdown-toggle").dataset.value);
+      
+      document.getElementById("month-title").textContent = `${year}年 ${month}月`;
+      await fetchMonthData(year, month);
+      
+      const calendar = document.getElementById("calendar");
+      calendar.innerHTML = "";
+      
+      let weekStart = parseInt(localStorage.getItem("weekStart") || "1");
+      const weekdays = ["日", "一", "二", "三", "四", "五", "六"];
+      const orderedWeekdays = weekdays.slice(weekStart).concat(weekdays.slice(0, weekStart));
+      
+      orderedWeekdays.forEach((d, i) => {
+        const el = document.createElement("div");
+        el.className = "weekday-header";
+        const realIndex = (i + weekStart) % 7;
+        if (realIndex === 0 || realIndex === 6) el.classList.add("weekend");
+        el.textContent = d;
+        el.onclick = () => { localStorage.setItem("weekStart", realIndex); updateCalendar(); };
+        calendar.appendChild(el);
+      });
+
+      const firstDay = new Date(year, month - 1, 1);
+      const lastDay = new Date(year, month, 0);
+      const startWeek = (firstDay.getDay() - weekStart + 7) % 7;
+      const daysInMonth = lastDay.getDate();
+
+      for (let i = 0; i < startWeek; i++) calendar.appendChild(document.createElement("div"));
+
+      for (let d = 1; d <= daysInMonth; d++) {
+        const dateObj = new Date(year, month - 1, d);
+        const ymd = `${year}${pad2(month)}${pad2(d)}`;
+        const fullDate = `${year}-${pad2(month)}-${pad2(d)}`;
+        const holiday = getHoliday(ymd);
+        
+        // 過濾顯示部門
+        let events = [];
+        if (currentDept === "ALL") {
+          events = [
+            ...deptEvents.ALL, ...deptEvents.SG2, ...deptEvents.SG3, ...deptEvents.SG4, ...deptEvents.SG5,
+            ...(userDept === "KEN" && isPrivateVisible ? deptEvents.KEN || [] : [])
+          ].filter(ev => ev.date === ymd);
+        } else if (currentDept === "PRIVATE" && userDept === "KEN") {
+          events = (deptEvents.KEN || []).filter(ev => ev.date === ymd);
+        } else {
+          events = (deptEvents[currentDept] || []).filter(ev => ev.date === ymd);
+        }
+
+        const lunar = Lunar.fromDate(dateObj);
+        const el = document.createElement("div");
+        el.className = "day";
+        el.dataset.date = ymd;
+        
+        if (today.getFullYear()===year && today.getMonth()+1===month && today.getDate()===d) el.classList.add("today");
+        if (holiday?.isHoliday) el.classList.add("holiday");
+        const dayOfWeek = dateObj.getDay();
+        if (dayOfWeek===0 || dayOfWeek===6) el.classList.add("weekend");
+        if (selectedDates.has(ymd)) el.classList.add("selected-day");
+
+        el.innerHTML = `<strong>${d}</strong><div class="lunar ${holiday?.isHoliday ? "holiday" : ""}">${holiday?.description || lunar.getDayInChinese()}</div>`;
+
+        if (events.length > 0) {
+           const dots = document.createElement("div");
+           dots.className = "event-dots";
+           const shown = new Set();
+           events.forEach(ev => {
+             if (!shown.has(ev.dept)) {
+               shown.add(ev.dept);
+               const dot = document.createElement("div");
+               dot.className = "dot " + ev.dept;
+               dots.appendChild(dot);
+             }
+           });
+           el.appendChild(dots);
+        }
+
+        // 觸控長按多選
+        let pressTimer;
+        el.addEventListener("touchstart", () => {
+          pressTimer = setTimeout(() => { multiSelectMode=true; toggleSelect(ymd, el); }, 450);
+        });
+        el.addEventListener("touchend", () => clearTimeout(pressTimer));
+        el.addEventListener("click", () => {
+          if (multiSelectMode) toggleSelect(ymd, el);
+          else openModal(fullDate, events);
+        });
+
+        // 桌機 Hover 提示
+        if (!/Mobi|Android/i.test(navigator.userAgent)) {
+           el.onmouseenter = (e) => {
+              const tips = [];
+              if(holiday?.description) tips.push(`【假日】${holiday.description}`);
+              events.forEach(ev => {
+                let timePre = (!ev.isAllDay && ev.startTime) ? `[${ev.startTime.slice(0,5)}] ` : "";
+                tips.push(`${timePre}[${ev.dept}] ${ev.description}`);
+              });
+              if(tips.length===0) return;
+              let t = document.createElement("div");
+              t.className = "hover-tooltip"; t.innerHTML = tips.join("<br>");
+              document.body.appendChild(t);
+              const rect = e.target.getBoundingClientRect();
+              t.style.left = (rect.left + window.scrollX + rect.width/2) + "px";
+              t.style.top = (rect.top + window.scrollY - 10) + "px";
+              t.style.transform = "translateX(-50%)";
+              el._tooltip = t;
+           };
+           el.onmouseleave = () => { if(el._tooltip) { el._tooltip.remove(); el._tooltip=null; } };
+        }
+        calendar.appendChild(el);
+      }
+      document.getElementById("loading").style.display = "none";
+    }
+
+    // --- 多選與分享 ---
+    function toggleSelect(ymd, el) {
+      const shareBtn = document.getElementById("multiShareBtn");
+      const controls = document.getElementById("multiSelectControls");
+      if (selectedDates.has(ymd)) { selectedDates.delete(ymd); el.classList.remove("selected-day"); }
+      else { selectedDates.add(ymd); el.classList.add("selected-day"); }
+      
+      controls.style.display = selectedDates.size > 0 ? "block" : "none";
+      if (selectedDates.size > 0) {
+         shareBtn.style.display = "inline-block";
+         shareBtn.textContent = `分享 (${selectedDates.size} 日)`;
+      } else {
+         multiSelectMode = false;
+      }
+    }
+
+    document.getElementById("clearSelectBtn").onclick = () => {
+       selectedDates.forEach(d => {
+          const c = document.querySelector(`[data-date="${d}"]`);
+          if(c) c.classList.remove("selected-day");
+       });
+       selectedDates.clear(); multiSelectMode = false;
+       document.getElementById("multiSelectControls").style.display = "none";
+    };
+
+    document.getElementById("multiShareBtn").onclick = async () => {
+       if (selectedDates.size === 0) return;
+       const dates = Array.from(selectedDates).sort();
+       let text = "";
+       for(const d of dates) {
+          const y=parseInt(d.slice(0,4)), m=parseInt(d.slice(4,6)), dd=d.slice(6,8);
+          await fetchMonthData(y, m); // 確保資料正確
+          const h = holidayList.find(x => x.date === d);
+          
+          let events = [];
+          if (currentDept === "ALL") {
+            events = [...deptEvents.ALL, ...deptEvents.SG2, ...deptEvents.SG3, ...deptEvents.SG4, ...deptEvents.SG5, ...(userDept === "KEN" && isPrivateVisible ? deptEvents.KEN : [])].filter(ev => ev.date === d);
+          } else if (currentDept === "PRIVATE") {
+             events = (deptEvents.KEN||[]).filter(ev => ev.date === d);
+          } else {
+             events = (deptEvents[currentDept]||[]).filter(ev => ev.date === d);
+          }
+          
+          text += `${y}-${m}-${dd}\n`;
+          if(h) text += `【假日】${h.description}\n`;
+          events.forEach(ev => {
+             let t = (!ev.isAllDay && ev.startTime) ? ` ${ev.startTime.slice(0,5)}` : "";
+             text += `[${ev.dept}]${t} ${ev.description}\n`;
+          });
+          if(!h && events.length===0) text += "(無事件)\n";
+          text += "\n";
+       }
+       if (navigator.share) { try{await navigator.share({title:"行程",text});}catch{} }
+       else { navigator.clipboard.writeText(text); alert("已複製"); }
+    };
+
+    // --- 匯出 ICS ---
+    document.getElementById("exportRangeBtn").onclick = () => document.getElementById("exportRangeModal").style.display = "flex";
+    document.getElementById("confirmExportRange").onclick = async () => {
+       const start = document.getElementById("exportStart").value;
+       const end = document.getElementById("exportEnd").value;
+       if(!start || !end) { alert("請選擇日期"); return; }
+       let s = new Date(start), e = new Date(end);
+       if(s>e) [s,e] = [e,s];
+       
+       let ics = "BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//ServicesCenter//TW\n";
+       while(s<=e) {
+          const y=s.getFullYear(), m=s.getMonth()+1, d=s.getDate();
+          const ymd = `${y}${pad2(m)}${pad2(d)}`;
+          await fetchMonthData(y, m);
+          
+          // 邏輯同 multiShare
+          const h = holidayList.find(x=>x.date===ymd);
+          let events = [];
+          if (currentDept === "ALL") {
+             events = [...deptEvents.ALL, ...deptEvents.SG2, ...deptEvents.SG3, ...deptEvents.SG4, ...deptEvents.SG5, ...(userDept === "KEN" && isPrivateVisible ? deptEvents.KEN : [])].filter(ev => ev.date === ymd);
+          } else if (currentDept === "PRIVATE") {
+             events = (deptEvents.KEN||[]).filter(ev => ev.date === ymd);
+          } else {
+             events = (deptEvents[currentDept]||[]).filter(ev => ev.date === ymd);
+          }
+
+          if(h) ics += `BEGIN:VEVENT\nDTSTART;VALUE=DATE:${ymd}\nSUMMARY:【假日】${h.description}\nEND:VEVENT\n`;
+          events.forEach(ev => {
+             if (ev.isAllDay) {
+                ics += `BEGIN:VEVENT\nDTSTART;VALUE=DATE:${ymd}\nSUMMARY:[${ev.dept}] ${ev.description}\nEND:VEVENT\n`;
+             } else if (ev.startTime) {
+                const sT = ev.startTime.replaceAll(":","").slice(0,4)+"00";
+                const eT = ev.endTime ? ev.endTime.replaceAll(":","").slice(0,4)+"00" : sT;
+                ics += `BEGIN:VEVENT\nDTSTART:${ymd}T${sT}\nDTEND:${ymd}T${eT}\nSUMMARY:[${ev.dept}] ${ev.description}\nEND:VEVENT\n`;
+             }
+          });
+          s.setDate(s.getDate()+1);
+       }
+       ics += "END:VCALENDAR";
+       const b = new Blob([ics], {type:"text/calendar"});
+       const a = document.createElement("a");
+       a.href = URL.createObjectURL(b); a.download = "export.ics"; a.click();
+       document.getElementById("exportRangeModal").style.display = "none";
+    };
+
+    // --- 登入/狀態管理 ---
+    async function login(){
+      await supabase.auth.signInWithOAuth({
+        provider:"google",
+        options:{redirectTo: window.location.href}
+      });
+    }
+    window.login = login;
+    window.logout = async () => {
+      await supabase.auth.signOut();
+      localStorage.removeItem("supabase.auth.token");
+      userSession=null; userDept="NONE";
+      window.location.reload();
+    };
+
+    async function handleSession(session) {
+      userSession = session;
+      userDept = "NONE";
+      if (session?.user?.email) await checkWhitelist(session.user.email);
+      
+      const label = userDept==="ALL"?"(管理員)":userDept==="NONE"?"(唯讀)":`(${userDept})`;
+      document.getElementById("loginBtn").style.display = session ? "none" : "inline-block";
+      document.getElementById("logoutBtn").style.display = session ? "inline-block" : "none";
+      document.getElementById("user-info").textContent = session ? `${session.user.email} ${label}` : "";
+      
+      initMenus();
+    }
+
+    function initMenus() {
+       // 設定年份月份選單
+       const yearDd = document.getElementById("yearDropdown");
+       const yearToggle = yearDd.querySelector(".dropdown-toggle");
+       const yearMenu = yearDd.querySelector(".dropdown-menu");
+       yearMenu.innerHTML="";
+       const cy = today.getFullYear();
+       for(let y=cy-5; y<=cy+5; y++){
+          const d = document.createElement("div"); d.textContent = y+"年"; d.dataset.value=y;
+          d.onclick=()=>{ yearToggle.textContent=d.textContent; yearToggle.dataset.value=y; updateCalendar(); yearMenu.style.display="none"; };
+          yearMenu.appendChild(d);
+       }
+       yearToggle.textContent=cy+" 年"; yearToggle.dataset.value=cy;
+       yearToggle.onclick = () => yearMenu.style.display = yearMenu.style.display==="block"?"none":"block";
+       
+       const mDd = document.getElementById("monthDropdown");
+       const mToggle = mDd.querySelector(".dropdown-toggle");
+       const mMenu = mDd.querySelector(".dropdown-menu");
+       mToggle.textContent = (today.getMonth()+1)+" 月"; mToggle.dataset.value = today.getMonth()+1;
+       mToggle.onclick = () => mMenu.style.display = mMenu.style.display==="block"?"none":"block";
+       mMenu.querySelectorAll("div").forEach(d=>{
+          d.onclick=()=>{ mToggle.textContent=d.textContent; mToggle.dataset.value=d.dataset.value; updateCalendar(); mMenu.style.display="none"; }
+       });
+
+       // 點擊外部關閉選單
+       document.addEventListener("click", e => {
+          if(!yearDd.contains(e.target)) yearMenu.style.display="none";
+          if(!mDd.contains(e.target)) mMenu.style.display="none";
+          if(!document.getElementById("deptDropdown").contains(e.target)) document.querySelector("#deptDropdown .dropdown-menu").style.display="none";
+       });
+
+       // 部門選單邏輯
+       const dDd = document.getElementById("deptDropdown");
+       const dMenu = dDd.querySelector(".dropdown-menu");
+       const dToggle = dDd.querySelector(".dropdown-toggle");
+       
+       // 如果是 KEN，加入私人選項
+       const oldP = dMenu.querySelector('[data-value="PRIVATE"]');
+       if(oldP) oldP.remove();
+       if(userDept==="KEN") {
+          const div = document.createElement("div");
+          div.className="dept-KEN"; div.dataset.value="PRIVATE"; div.textContent="KEN 私人日程";
+          dMenu.appendChild(div);
+          div.onclick=()=>{ currentDept="PRIVATE"; localStorage.setItem("selectedDept","PRIVATE"); dToggle.textContent=div.textContent; dToggle.className="dropdown-toggle dept-KEN"; dMenu.style.display="none"; updateCalendar(); };
+          
+          document.getElementById("privateToggle").style.display="inline-flex";
+          document.getElementById("privateCheckbox").checked = isPrivateVisible;
+          document.getElementById("privateCheckbox").onchange = (e)=>{ isPrivateVisible=e.target.checked; localStorage.setItem("showPrivate", isPrivateVisible); updateCalendar(); };
+       }
+
+       dToggle.onclick = () => dMenu.style.display=dMenu.style.display==="block"?"none":"block";
+       dMenu.querySelectorAll("div:not([data-value='PRIVATE'])").forEach(it=>{
+          it.onclick=()=>{ currentDept=it.dataset.value; localStorage.setItem("selectedDept",currentDept); dToggle.textContent=it.textContent; dToggle.className="dropdown-toggle "+it.className; dMenu.style.display="none"; updateCalendar(); };
+       });
+
+       // 還原上次選擇部門
+       const saved = localStorage.getItem("selectedDept");
+       if(saved && (saved!=="PRIVATE" || userDept==="KEN")) {
+          currentDept = saved;
+          const target = dMenu.querySelector(`div[data-value="${saved}"]`);
+          if(target) { dToggle.textContent=target.textContent; dToggle.className="dropdown-toggle "+(saved==="PRIVATE"?"dept-KEN":`dept-${saved}`); }
+       }
+    }
+
+    function updateAddDeptOptions() {
+      const sel = document.getElementById("new-dept");
+      sel.innerHTML = "";
+      let opts = [];
+      if (userDept === "ALL") opts = ["ALL", "SG2", "SG3", "SG4", "SG5"];
+      else if (userDept === "KEN") opts = ["ALL", "SG2", "SG3", "SG4", "SG5", "KEN"];
+      else if (["SG2", "SG3", "SG4", "SG5"].includes(userDept)) { opts = [userDept]; sel.disabled=true; }
+      else { return; } // 無權限
+
+      opts.forEach(d => {
+         const o = document.createElement("option");
+         o.value=d; o.textContent=d;
+         sel.appendChild(o);
+      });
+      sel.value = opts[0];
+      sel.disabled = opts.length <= 1;
+      sel.onchange = window.toggleTagsVisibility;
+    }
+
+    async function init() {
+      const { data: { session } } = await supabase.auth.getSession();
+      await handleSession(session);
+      
+      document.getElementById("prevMonth").onclick = () => switchMonth("prev");
+      document.getElementById("nextMonth").onclick = () => switchMonth("next");
+      document.getElementById("todayBtn").onclick = () => {
+         const yt=document.querySelector("#yearDropdown .dropdown-toggle"), mt=document.querySelector("#monthDropdown .dropdown-toggle");
+         yt.textContent=today.getFullYear()+" 年"; yt.dataset.value=today.getFullYear();
+         mt.textContent=(today.getMonth()+1)+" 月"; mt.dataset.value=today.getMonth()+1;
+         updateCalendar();
+      };
+      
+      await updateCalendar();
+    }
+
+    async function switchMonth(dir) {
+       const cal = document.getElementById("calendar");
+       cal.style.opacity = 0;
+       let y = parseInt(document.querySelector("#yearDropdown .dropdown-toggle").dataset.value);
+       let m = parseInt(document.querySelector("#monthDropdown .dropdown-toggle").dataset.value);
+       if(dir==="next"){ if(m<12) m++; else { m=1; y++; } }
+       else { if(m>1) m--; else { m=12; y--; } }
+       
+       document.querySelector("#yearDropdown .dropdown-toggle").textContent=y+" 年";
+       document.querySelector("#yearDropdown .dropdown-toggle").dataset.value=y;
+       document.querySelector("#monthDropdown .dropdown-toggle").textContent=m+" 月";
+       document.querySelector("#monthDropdown .dropdown-toggle").dataset.value=m;
+       
+       await updateCalendar();
+       cal.style.opacity = 1;
+       cal.classList.add(dir==="next"?"fade-in-left":"fade-in-right");
+       setTimeout(()=>cal.classList.remove("fade-in-left","fade-in-right"), 300);
+    }
+
+    // 手機滑動
+    let tsX=0, teX=0;
+    const cal = document.getElementById("calendar");
+    cal.addEventListener("touchstart", e=>tsX=e.changedTouches[0].screenX);
+    cal.addEventListener("touchend", e=>{
+       teX=e.changedTouches[0].screenX;
+       if(Math.abs(teX-tsX)>50) {
+          if(teX-tsX>0) { cal.classList.add("slide-right"); setTimeout(()=>{ document.getElementById("prevMonth").click(); cal.classList.remove("slide-right"); },200); }
+          else { cal.classList.add("slide-left"); setTimeout(()=>{ document.getElementById("nextMonth").click(); cal.classList.remove("slide-left"); },200); }
+       }
+    });
+
+    init();
+  </script>
+</head>
+<body>
+  <h2>服務技術中心行事曆</h2>
+
+  <div class="controls">
+    <label id="privateToggle" style="display:none; align-items:center; gap:4px; font-size:0.9rem;">
+       <input type="checkbox" id="privateCheckbox" />私人
+    </label>
+    <button id="todayBtn">今日</button>
+    
+    <div class="dropdown" id="deptDropdown">
+      <div class="dropdown-toggle dept-ALL">所有部門</div>
+      <div class="dropdown-menu">
+        <div class="dept-ALL" data-value="ALL">所有部門</div>
+        <div class="dept-SG2" data-value="SG2">SG2 空調空質</div>
+        <div class="dept-SG3" data-value="SG3">SG3 電化商品</div>
+        <div class="dept-SG4" data-value="SG4">SG4 視聽商品</div>
+        <div class="dept-SG5" data-value="SG5">SG5 教育訓練</div>
+      </div>
+    </div>
+
+    <button id="loginBtn" onclick="login()">登入</button>
+    <button id="logoutBtn" onclick="logout()" style="display:none;">登出</button>
+    <button id="exportRangeBtn">匯出.ics</button>
+    <div id="user-info" style="font-size:0.8rem; align-self:center;"></div>
+  </div>
+
+  <div class="controls">
+    <button id="prevMonth">〈</button>
+    <div class="dropdown" id="yearDropdown">
+      <div class="dropdown-toggle">年份</div>
+      <div class="dropdown-menu"></div>
+    </div>
+    <div class="dropdown" id="monthDropdown">
+      <div class="dropdown-toggle">月份</div>
+      <div class="dropdown-menu">
+        <div data-value="1">1 月</div><div data-value="2">2 月</div><div data-value="3">3 月</div>
+        <div data-value="4">4 月</div><div data-value="5">5 月</div><div data-value="6">6 月</div>
+        <div data-value="7">7 月</div><div data-value="8">8 月</div><div data-value="9">9 月</div>
+        <div data-value="10">10 月</div><div data-value="11">11 月</div><div data-value="12">12 月</div>
+      </div>
+    </div>
+    <button id="nextMonth">〉</button>
+  </div>
+
+  <div id="month-title"></div>
+  <div id="loading">載入中...</div>
+  
+  <div id="calendar"></div>
+
+  <div id="multiSelectControls" style="text-align:center; margin-top:12px; display:none;">
+    <button id="multiShareBtn" class="btn-primary">分享</button>
+    <button id="clearSelectBtn" class="btn-secondary">取消選取</button>
+  </div>
+
+  <div id="modal" onclick="closeModal(event)">
+    <div class="content">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+        <h3 id="modal-date" style="margin:0;"></h3>
+        <button id="shareBtn" class="icon-btn" onclick="document.getElementById('multiShareBtn').click();"> 
+           </button>
+      </div>
+
+      <div id="modal-list"></div>
+
+      <div class="add-section">
+        <hr style="margin: 15px 0; border:0; border-top:1px solid #eee;">
+        
+        <select id="new-dept"></select>
+
+        <div id="tag-container" class="tag-container">
+           <div class="tag-chip" onclick="selectTag(this, '活動')">[活動]</div>
+           <div class="tag-chip" onclick="selectTag(this, '出差')">[出差]</div>
+           <div class="tag-chip" onclick="selectTag(this, '會議')">[會議]</div>
+        </div>
+
+        <div class="time-row">
+           <label style="cursor:pointer; display:flex; align-items:center;">
+             <input type="checkbox" id="is-all-day" checked onchange="toggleTimeInputs()"> 
+             <span style="margin-left:4px;">整天</span>
+           </label>
+           <div id="time-inputs" class="time-inputs hidden">
+             <input type="time" id="start-time"> ~ <input type="time" id="end-time">
+           </div>
+        </div>
+
+        <textarea id="new-desc" placeholder="事件描述" rows="3"></textarea>
+        <div class="btn-row">
+          <button class="btn-primary" onclick="addEvent()">新增事件</button>
+          <button class="btn-secondary" onclick="closeModal()">關閉</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="exportRangeModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:3000; align-items:center; justify-content:center;">
+    <div style="background:#fff; padding:20px; border-radius:8px; width:280px; text-align:center;">
+      <h3>匯出 ICS</h3>
+      <div style="margin:10px 0;">開始：<input type="date" id="exportStart" style="width:100%;"></div>
+      <div style="margin:10px 0;">結束：<input type="date" id="exportEnd" style="width:100%;"></div>
+      <div style="margin-top:15px; display:flex; gap:10px; justify-content:center;">
+        <button id="confirmExportRange" class="btn-primary">匯出</button>
+        <button onclick="document.getElementById('exportRangeModal').style.display='none'" class="btn-secondary">取消</button>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>
