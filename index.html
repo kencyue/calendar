@@ -101,7 +101,7 @@
     .day.selected-day { background-color: #ffeeba; border-color: #ffc107; }
     
     .lunar { 
-      font-size: 0.5rem; color: #888; margin-top: 2px; 
+      font-size: 0.65rem; color: #888; margin-top: 2px; 
       text-align: center; line-height: 1.2; width: 100%; 
     }
     .lunar.holiday { color: var(--color-HOLIDAY); font-weight: bold; }
@@ -151,9 +151,9 @@
       font-size: 0.9rem; cursor: pointer; background: #f8f9fa; color: #555;
       transition: all 0.2s; user-select: none; white-space: nowrap; 
     }
+    .chip.active { background: var(--primary); color: white; border-color: var(--primary); }
     
     /* 動態顏色 Class */
-    .chip.active { color: white; border-color: transparent; }
     .chip.active.dept-ALL { background: var(--color-ALL); }
     .chip.active.dept-SG2 { background: var(--color-SG2); }
     .chip.active.dept-SG3 { background: var(--color-SG3); }
@@ -182,7 +182,6 @@
     .holiday-badge { background-color: var(--color-HOLIDAY); color: white; }
     .holiday-text { color: var(--color-HOLIDAY); font-weight: bold; }
     
-    /* 類別泡泡 (動態顏色) */
     .tag-badge { color: #fff; opacity: 0.9; }
     .tag-badge.ALL { background-color: var(--color-ALL); }
     .tag-badge.SG2 { background-color: var(--color-SG2); }
@@ -209,15 +208,22 @@
     const supabaseKey = "sb_publishable_XEf_IKh9aiU7if2jrNHbmQ_Fvrqvjhd";
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // 🔥 全域登出函式
+    // 🔥 全域登出函式 (強制跳轉防快取)
     window.logout = async function() {
         if(!confirm("確定要登出嗎？")) return;
-        localStorage.clear(); sessionStorage.clear();
-        try { await supabase.auth.signOut(); } catch(e) { console.log(e); }
+        
+        // 1. 清空本地存儲
+        localStorage.clear();
+        sessionStorage.clear();
+        
+        // 2. 嘗試後端登出 (不等待結果，避免卡住)
+        supabase.auth.signOut();
+
+        // 3. 強制跳轉頁面 (加上時間戳記欺騙瀏覽器是新頁面)
         window.location.href = window.location.pathname + "?t=" + new Date().getTime();
     };
 
-    // 🔥 全域刪除/修改函式 (ID操作)
+    // 🔥 全域刪除函式
     window.deleteHolidayById = async function(id) {
       if(!confirm("確定要刪除這個假日嗎？")) return;
       const { error } = await supabase.from("holidays").delete().eq("id", id);
@@ -244,12 +250,15 @@
     let userSession = null;
     let userDept = "NONE";
     let isPrivateVisible = localStorage.getItem("showPrivate") === "true";
+    
+    // 🔥 補回這個變數，解決點擊沒反應問題
+    let multiSelectMode = false;
     let selectedDates = new Set();
     
     // 編輯狀態
     let selectedTag = ""; 
     let selectedDeptBubble = "ALL";
-    let isEditingEventId = null; // 用來標記是否正在編輯某個事件
+    let isEditingEventId = null; 
 
     function pad2(n){return String(n).padStart(2,"0");}
     function ymdToCompact(d){return d.replaceAll("-","");}
@@ -283,7 +292,7 @@
       const eq = await supabase.from("events").select("*").gte("date",start).lt("date",end).order("date");
       const events = (eq.data||[]).map(r=>({
         id: r.id, date: ymdToCompact(r.date), dept: r.dept, description: r.description,
-        category: r.category, // 🔥 新增欄位
+        category: r.category, 
         startTime: r.start_time, endTime: r.end_time, isAllDay: r.is_all_day
       }));
 
@@ -309,16 +318,13 @@
     window.selectTag = function(el, tag) {
       if (el.classList.contains("active")) {
         el.classList.remove("active"); selectedTag = "";
-        // 移除部門顏色 class
         el.className = "chip"; 
       } else {
-        // 清除其他 active
         document.querySelectorAll("#tag-container .chip").forEach(c => {
            c.classList.remove("active");
-           c.className = "chip"; // 重置 class
+           c.className = "chip"; 
         });
         el.classList.add("active");
-        // 🔥 加上部門顏色 class
         const currentDeptClass = (selectedDeptBubble === "HOLIDAY" || selectedDeptBubble === "PRIVATE") ? "dept-KEN" : `dept-${selectedDeptBubble}`;
         el.classList.add(currentDeptClass);
         selectedTag = tag;
@@ -331,11 +337,10 @@
       el.classList.add("active");
       selectedDeptBubble = dept;
       
-      // 切換部門後，如果有選類別，要更新類別泡泡的顏色
       if(selectedTag) {
          const activeTag = document.querySelector("#tag-container .chip.active");
          if(activeTag) {
-            activeTag.className = "chip active"; // 重置
+            activeTag.className = "chip active"; 
             const currentDeptClass = (dept === "HOLIDAY" || dept === "PRIVATE") ? "dept-KEN" : `dept-${dept}`;
             activeTag.classList.add(currentDeptClass);
          }
@@ -347,7 +352,6 @@
     window.toggleTagsVisibility = function() {
       const dept = selectedDeptBubble;
       const tagContainer = document.getElementById("tag-container");
-      // 假日、KEN、私人 -> 隱藏類別標籤 (或可根據需求開啟)
       if (dept === "HOLIDAY" || dept === "KEN" || dept === "PRIVATE") {
         tagContainer.style.display = "none"; selectedTag = "";
         document.querySelectorAll("#tag-container .chip").forEach(c => { c.classList.remove("active"); c.className = "chip"; });
@@ -356,7 +360,6 @@
       }
     }
 
-    // 更新類別泡泡列表 (從 DB 抓)
     function updateCategoryBubbles() {
       const container = document.getElementById("tag-container");
       container.innerHTML = "";
@@ -403,7 +406,6 @@
       const ymd = currentDate.replaceAll("-","");
       const holiday = getHoliday(ymd);
       
-      // 假日
       if (holiday) {
         const div = document.createElement("div"); div.className = "event-item";
         const contentSpan = document.createElement("span");
@@ -412,21 +414,15 @@
         div.appendChild(contentSpan);
 
         if (userDept === "KEN") {
-          // 編輯
           const editBtn = document.createElement("button");
           editBtn.textContent = "✎";
           editBtn.className = "icon-btn";
           editBtn.style.color = "#aaa";
           editBtn.onclick = () => {
-             // 進入編輯模式：打開新增面板，填入資料
-             window.showAddForm(true); // true = edit mode
-             
-             // 模擬選取假日
+             window.showAddForm(true); 
              const holidayChip = Array.from(document.querySelectorAll("#dept-bubbles .chip")).find(c => c.textContent === "假日");
              if(holidayChip) holidayChip.click();
-             
              document.getElementById("new-desc").value = holiday.description;
-             // 標記正在編輯這個 ID
              isEditingEventId = { type: 'holiday', id: holiday.id };
           };
 
@@ -441,7 +437,6 @@
         list.appendChild(div);
       }
 
-      // 事件
       if(events.length===0 && !holiday){
         list.innerHTML += "<div class='event-item' style='color:#999'><span>(無事件)</span></div>";
       } else {
@@ -452,7 +447,6 @@
           let timeHtml = (!ev.isAllDay && ev.startTime) ? `<span class="badge time-badge">${ev.startTime.slice(0,5)}${ev.endTime?'~'+ev.endTime.slice(0,5):''}</span>` : "";
           let deptHtml = `<span class="badge dept-badge ${ev.dept}">${ev.dept}</span>`;
           
-          // 🔥 類別徽章 (使用 category 欄位)
           let catHtml = "";
           if (ev.category) {
              catHtml = `<span class="badge tag-badge ${ev.dept}">${ev.category}</span>`;
@@ -463,25 +457,20 @@
           span.innerHTML = `${timeHtml}${deptHtml}${catHtml}${ev.description}`;
 
           if (canOperateDept(ev.dept)) {
-            // 編輯按鈕
             const editBtn = document.createElement("button");
             editBtn.textContent = "✎";
             editBtn.className = "icon-btn";
             editBtn.style.color = "#aaa";
             editBtn.onclick = () => {
-                window.showAddForm(true); // 編輯模式
-                
-                // 1. 選部門
+                window.showAddForm(true); 
                 const deptChip = Array.from(document.querySelectorAll("#dept-bubbles .chip")).find(c => c.textContent === ev.dept);
                 if(deptChip) window.selectDeptBubble(deptChip, ev.dept);
                 
-                // 2. 選類別
                 if(ev.category) {
                    const catChip = Array.from(document.querySelectorAll("#tag-container .chip")).find(c => c.textContent === ev.category);
                    if(catChip) window.selectTag(catChip, ev.category);
                 }
                 
-                // 3. 時間與內容
                 document.getElementById("is-all-day").checked = ev.isAllDay;
                 window.toggleTimeInputs();
                 if(!ev.isAllDay) {
@@ -489,8 +478,6 @@
                    document.getElementById("end-time").value = ev.endTime;
                 }
                 document.getElementById("new-desc").value = ev.description;
-                
-                // 標記 ID
                 isEditingEventId = { type: 'event', id: ev.id };
             };
 
@@ -506,13 +493,11 @@
       }
     }
 
-    // 介面切換
     window.showAddForm = function(isEdit = false) {
       document.getElementById("add-form-container").style.display = "block";
       document.getElementById("show-add-btn").style.display = "none";
-      // 改變按鈕文字
       document.getElementById("confirm-btn").textContent = isEdit ? "確認修改" : "確認新增";
-      if(!isEdit) isEditingEventId = null; // 清除編輯狀態
+      if(!isEdit) isEditingEventId = null;
     }
     
     window.hideAddForm = function() {
@@ -525,7 +510,6 @@
       currentDate = dateStr;
       document.getElementById("modal-date").textContent = dateStr;
       
-      // Reset Form
       document.getElementById("new-desc").value = "";
       document.getElementById("is-all-day").checked = true;
       document.getElementById("start-time").value = "";
@@ -543,7 +527,7 @@
       } else {
         addSection.style.display = "block";
         updateAddDeptBubbles();
-        updateCategoryBubbles(); // 載入類別泡泡
+        updateCategoryBubbles(); 
         window.toggleTagsVisibility(); 
       }
       document.getElementById("modal").style.display="flex";
@@ -562,21 +546,16 @@
 
       if (!desc) { alert("請輸入描述"); return; }
 
-      // 假日處理
       if (dept === "HOLIDAY") {
          if (userDept !== "KEN") { alert("權限不足"); return; }
-         
          if (isEditingEventId && isEditingEventId.type === 'holiday') {
-            // 修改假日
             await supabase.from("holidays").update({ description: desc }).eq("id", isEditingEventId.id);
          } else {
-            // 新增假日
             await supabase.from("holidays").insert([{ date: currentDate, description: desc, is_holiday: true }]);
          }
          window.hideAddForm(); await window.refreshModal(); return;
       }
 
-      // 事件處理
       if (!isAllDay) {
          startTime = document.getElementById("start-time").value;
          endTime = document.getElementById("end-time").value;
@@ -589,7 +568,7 @@
         date: currentDate, 
         dept, 
         description: desc, 
-        category: selectedTag || null, // 🔥 存入類別
+        category: selectedTag || null, 
         is_all_day: isAllDay,
         start_time: startTime || null, 
         end_time: endTime || null
@@ -597,11 +576,9 @@
 
       let error;
       if (isEditingEventId && isEditingEventId.type === 'event') {
-         // 修改事件
          const res = await supabase.from("events").update(payload).eq("id", isEditingEventId.id);
          error = res.error;
       } else {
-         // 新增事件
          const res = await supabase.from("events").insert([payload]);
          error = res.error;
       }
@@ -656,7 +633,9 @@
         const lunar = Lunar.fromDate(new Date(year, month-1, d));
         const el = document.createElement("div"); el.className = "day"; el.dataset.date = ymd;
         if (today.getFullYear()===year && today.getMonth()+1===month && today.getDate()===d) el.classList.add("today");
+        
         if (holiday?.isHoliday) el.classList.add("holiday");
+        
         const dayOfWeek = new Date(year, month-1, d).getDay();
         if (dayOfWeek===0 || dayOfWeek===6) el.classList.add("weekend");
         if (selectedDates.has(ymd)) el.classList.add("selected-day");
@@ -675,6 +654,7 @@
         let pressTimer;
         el.addEventListener("touchstart", () => pressTimer = setTimeout(() => { multiSelectMode=true; toggleSelect(ymd, el); }, 450));
         el.addEventListener("touchend", () => clearTimeout(pressTimer));
+        // 🔥 這裡使用 multiSelectMode 變數
         el.addEventListener("click", () => { if (multiSelectMode) toggleSelect(ymd, el); else openModal(fullDate, events); });
 
         if (!/Mobi|Android/i.test(navigator.userAgent)) {
@@ -765,128 +745,6 @@
        const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = "export.ics"; a.click();
        document.getElementById("exportRangeModal").style.display = "none";
     };
-
-    async function login(){
-      const redirectUrl = window.location.origin + window.location.pathname;
-      await supabase.auth.signInWithOAuth({ provider:"google", options:{redirectTo: redirectUrl} });
-    }
-    window.login = login;
-    window.logout = async () => { await supabase.auth.signOut(); localStorage.removeItem("supabase.auth.token"); userSession=null; userDept="NONE"; window.location.reload(); };
-
-    async function handleSession(session) {
-      userSession = session; userDept = "NONE";
-      if (session?.user?.email) await checkWhitelist(session.user.email);
-      const label = userDept==="ALL"?"(管理員)":userDept==="NONE"?"(唯讀)":`(${userDept})`;
-      document.getElementById("loginBtn").style.display = session ? "none" : "inline-block";
-      document.getElementById("logoutBtn").style.display = session ? "inline-block" : "none";
-      document.getElementById("user-info").textContent = session ? `${session.user.email} ${label}` : "";
-      initMenus();
-      fetchCategories(); // 🔥 登入後抓類別
-    }
-
-    supabase.auth.onAuthStateChange((evt, session) => {
-       if(evt==='SIGNED_IN' || evt==='TOKEN_REFRESHED') handleSession(session);
-       else if(evt==='SIGNED_OUT') handleSession(null);
-    });
-
-    function initMenus() {
-       const yearDd = document.getElementById("yearDropdown"), yToggle = yearDd.querySelector(".dropdown-toggle"), yMenu = yearDd.querySelector(".dropdown-menu");
-       yMenu.innerHTML=""; const cy = today.getFullYear();
-       for(let y=cy-5; y<=cy+5; y++){
-          const d = document.createElement("div"); d.textContent = y+"年"; d.dataset.value=y;
-          d.onclick=()=>{ yToggle.textContent=d.textContent; yToggle.dataset.value=y; updateCalendar(); yMenu.style.display="none"; };
-          yMenu.appendChild(d);
-       }
-       yToggle.textContent=cy+" 年"; yToggle.dataset.value=cy;
-       yToggle.onclick = () => yMenu.style.display = yMenu.style.display==="block"?"none":"block";
-       
-       const mDd = document.getElementById("monthDropdown"), mToggle = mDd.querySelector(".dropdown-toggle"), mMenu = mDd.querySelector(".dropdown-menu");
-       mToggle.textContent = (today.getMonth()+1)+" 月"; mToggle.dataset.value = today.getMonth()+1;
-       mToggle.onclick = () => mMenu.style.display = mMenu.style.display==="block"?"none":"block";
-       mMenu.querySelectorAll("div").forEach(d=>{ d.onclick=()=>{ mToggle.textContent=d.textContent; mToggle.dataset.value=d.dataset.value; updateCalendar(); mMenu.style.display="none"; } });
-
-       document.addEventListener("click", e => { if(!yearDd.contains(e.target)) yMenu.style.display="none"; if(!mDd.contains(e.target)) mMenu.style.display="none"; if(!document.getElementById("deptDropdown").contains(e.target)) document.querySelector("#deptDropdown .dropdown-menu").style.display="none"; });
-
-       const dDd = document.getElementById("deptDropdown"), dMenu = dDd.querySelector(".dropdown-menu"), dToggle = dDd.querySelector(".dropdown-toggle");
-       const oldP = dMenu.querySelector('[data-value="PRIVATE"]'); if(oldP) oldP.remove();
-       if(userDept==="KEN") {
-          const div = document.createElement("div"); div.className="dept-text-KEN"; div.dataset.value="PRIVATE"; div.textContent="KEN 私人日程";
-          dMenu.appendChild(div);
-          div.onclick=()=>{ currentDept="PRIVATE"; localStorage.setItem("selectedDept","PRIVATE"); dToggle.textContent=div.textContent; dToggle.className="dropdown-toggle dept-text-KEN"; dMenu.style.display="none"; updateCalendar(); };
-          
-          const pToggle = document.getElementById("privateToggle");
-          pToggle.style.display="flex"; 
-          pToggle.innerHTML = `<label class="switch"><input type="checkbox" id="privateCheckbox"><span class="slider"></span></label><span style="margin-left:8px; font-size:0.9rem;">私人</span>`;
-          
-          const ck = document.getElementById("privateCheckbox");
-          ck.checked = isPrivateVisible;
-          ck.onchange = (e)=>{ isPrivateVisible=e.target.checked; localStorage.setItem("showPrivate", isPrivateVisible); updateCalendar(); };
-       }
-
-       dToggle.onclick = () => dMenu.style.display=dMenu.style.display==="block"?"none":"block";
-       dMenu.querySelectorAll("div:not([data-value='PRIVATE'])").forEach(it=>{
-          it.onclick=()=>{ currentDept=it.dataset.value; localStorage.setItem("selectedDept",currentDept); dToggle.textContent=it.textContent; dToggle.className="dropdown-toggle "+("dept-text-"+it.dataset.value); dMenu.style.display="none"; updateCalendar(); };
-       });
-       const saved = localStorage.getItem("selectedDept");
-       if(saved && (saved!=="PRIVATE" || userDept==="KEN")) {
-          currentDept = saved;
-          const target = dMenu.querySelector(`div[data-value="${saved}"]`);
-          if(target) { dToggle.textContent=target.textContent; dToggle.className="dropdown-toggle "+("dept-text-"+saved); }
-       }
-    }
-
-    function updateAddDeptBubbles() {
-      const container = document.getElementById("dept-bubbles");
-      container.innerHTML = "";
-      let opts = [];
-      if (userDept === "ALL" || userDept === "KEN") opts = ["ALL", "SG2", "SG3", "SG4", "SG5"];
-      if (userDept === "KEN") opts.push("KEN", "HOLIDAY");
-      if (["SG2", "SG3", "SG4", "SG5"].includes(userDept)) opts = [userDept];
-
-      if (opts.length === 1 && userDept !== "ALL" && userDept !== "KEN") {
-         container.style.display = "none";
-         selectedDeptBubble = opts[0];
-         return;
-      } else {
-         container.style.display = "flex";
-      }
-
-      opts.forEach(d => {
-        const chip = document.createElement("div"); chip.className = "chip";
-        if(d === "HOLIDAY") { chip.textContent = "假日"; chip.classList.add("holiday-chip"); } else { chip.textContent = d; }
-        
-        chip.onclick = () => window.selectDeptBubble(chip, d);
-        container.appendChild(chip);
-      });
-      if(opts.length > 0) { selectedDeptBubble = opts[0]; container.firstChild.classList.add("active"); }
-    }
-
-    async function init() {
-      const { data: { session } } = await supabase.auth.getSession();
-      await handleSession(session);
-      document.getElementById("prevMonth").onclick = () => switchMonth("prev");
-      document.getElementById("nextMonth").onclick = () => switchMonth("next");
-      document.getElementById("todayBtn").onclick = () => {
-         const yt=document.querySelector("#yearDropdown .dropdown-toggle"), mt=document.querySelector("#monthDropdown .dropdown-toggle");
-         yt.textContent=today.getFullYear()+" 年"; yt.dataset.value=today.getFullYear();
-         mt.textContent=(today.getMonth()+1)+" 月"; mt.dataset.value=today.getMonth()+1;
-         updateCalendar();
-      };
-      await updateCalendar();
-    }
-
-    async function switchMonth(dir) {
-       let y = parseInt(document.querySelector("#yearDropdown .dropdown-toggle").dataset.value);
-       let m = parseInt(document.querySelector("#monthDropdown .dropdown-toggle").dataset.value);
-       if(dir==="next"){ if(m<12) m++; else { m=1; y++; } } else { if(m>1) m--; else { m=12; y--; } }
-       document.querySelector("#yearDropdown .dropdown-toggle").textContent=y+" 年"; document.querySelector("#yearDropdown .dropdown-toggle").dataset.value=y;
-       document.querySelector("#monthDropdown .dropdown-toggle").textContent=m+" 月"; document.querySelector("#monthDropdown .dropdown-toggle").dataset.value=m;
-       await updateCalendar();
-    }
-
-    let tsX=0; const cal = document.getElementById("calendar");
-    cal.addEventListener("touchstart", e=>tsX=e.changedTouches[0].screenX);
-    cal.addEventListener("touchend", e=>{ if(Math.abs(e.changedTouches[0].screenX-tsX)>50) e.changedTouches[0].screenX-tsX>0?document.getElementById("prevMonth").click():document.getElementById("nextMonth").click(); });
 
     init();
   </script>
