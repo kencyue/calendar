@@ -7,6 +7,7 @@
   <script src="https://cdn.jsdelivr.net/npm/lunar-javascript@1.6.6/lunar.min.js"></script>
   
   <style>
+    /* === 基礎變數 === */
     :root {
       --primary: #007bff;
       --bg-color: #f4f6f9;
@@ -15,14 +16,14 @@
       --border-color: #ddd;
       --shadow: 0 4px 12px rgba(0,0,0,0.1);
       
-      /* 部門顏色 */
-      --color-ALL: #000000;
-      --color-SG2: #007bff;
-      --color-SG3: #28a745;
-      --color-SG4: #6f42c1;
-      --color-SG5: #fd7e14;
-      --color-KEN: #e83e8c;
-      --color-HOLIDAY: #dc3545;
+      /* 🔥 部門顏色 (依照您的指定) */
+      --color-ALL: #000000;  /* 黑 */
+      --color-SG2: #007bff;  /* 藍 */
+      --color-SG3: #28a745;  /* 綠 */
+      --color-SG4: #6f42c1;  /* 紫 */
+      --color-SG5: #fd7e14;  /* 橘 */
+      --color-KEN: #e83e8c;  /* Pink */
+      --color-HOLIDAY: #dc3545; /* 紅 */
     }
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -34,6 +35,7 @@
     }
     h2 { text-align: center; margin: 10px 0 15px 0; font-size: 1.5rem; }
 
+    /* === 控制列 === */
     .controls {
       display: flex; justify-content: center; gap: 6px;
       margin-bottom: 8px; flex-wrap: wrap; align-items: center;
@@ -47,6 +49,7 @@
     .btn-primary { background: var(--primary); color: white; border: none; }
     .btn-secondary { background: #6c757d; color: white; border: none; }
     
+    /* === 下拉選單 === */
     .dropdown { position: relative; display: inline-block; }
     .dropdown-toggle {
       background: var(--card-bg); border: 1px solid var(--border-color);
@@ -62,6 +65,7 @@
     .dropdown-menu div { padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #eee; white-space: nowrap; }
     .dropdown-menu div:hover { background: #f8f9fa; }
 
+    /* 下拉選單文字顏色 */
     .dept-text-ALL { color: var(--color-ALL); font-weight: 700; }
     .dept-text-SG2 { color: var(--color-SG2); font-weight: 700; }
     .dept-text-SG3 { color: var(--color-SG3); font-weight: 700; }
@@ -69,6 +73,7 @@
     .dept-text-SG5 { color: var(--color-SG5); font-weight: 700; }
     .dept-text-KEN { color: var(--color-KEN); font-weight: 700; }
 
+    /* === 滑動開關 === */
     .switch { position: relative; display: inline-block; width: 40px; height: 22px; vertical-align: middle; }
     .switch input { opacity: 0; width: 0; height: 0; }
     .slider { position: absolute; cursor: pointer; inset: 0; background-color: #ccc; transition: .4s; border-radius: 34px; }
@@ -76,6 +81,7 @@
     input:checked + .slider { background-color: var(--primary); }
     input:checked + .slider:before { transform: translateX(18px); }
     
+    /* === 月曆主體 === */
     #calendar {
       display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px;
       max-width: 800px; margin: 5px auto 0 auto;
@@ -95,6 +101,7 @@
     .lunar { font-size: 0.7rem; color: #888; margin-top: 2px; }
     .lunar.holiday { color: var(--color-HOLIDAY); font-weight: bold; }
 
+    /* === 事件點點 === */
     .event-dots { display: flex; gap: 3px; margin-top: 4px; flex-wrap: wrap; justify-content: center; }
     .dot { width: 6px; height: 6px; border-radius: 50%; }
     .dot.ALL { background: var(--color-ALL); }
@@ -104,6 +111,7 @@
     .dot.SG5 { background: var(--color-SG5); }
     .dot.KEN { background: var(--color-KEN); }
 
+    /* === 彈窗 (Modal) === */
     #modal {
       display: none; position: fixed; inset: 0;
       background: rgba(0,0,0,0.4); backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px);
@@ -142,6 +150,7 @@
     .chip.active { background: var(--primary); color: white; border-color: var(--primary); box-shadow: 0 2px 5px rgba(0,123,255,0.3); }
     .chip.holiday-chip.active { background: var(--color-HOLIDAY); border-color: var(--color-HOLIDAY); box-shadow: 0 2px 5px rgba(220,53,69,0.3); }
 
+    /* === 徽章 === */
     .badge {
       display: inline-flex; align-items: center; justify-content: center;
       padding: 2px 8px; border-radius: 12px;
@@ -178,8 +187,43 @@
     import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
     
     const supabaseUrl = "https://uiewxojtldhebydjmczh.supabase.co";
+    // 🔥 你的 Key
     const supabaseKey = "sb_publishable_XEf_IKh9aiU7if2jrNHbmQ_Fvrqvjhd";
+    
     const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // 🔥🔥 全域綁定 (核彈級修正) 🔥🔥
+    // 直接把刪除功能掛在 Window 上，確保 HTML onclick 一定找得到
+    window.deleteHolidayById = async function(id) {
+      console.log("觸發全域刪除, ID:", id); // 點擊應該要看到這個
+      
+      if(!confirm("確定要刪除這個假日嗎？")) return;
+      
+      const { error } = await supabase.from("holidays").delete().eq("id", id);
+      
+      if (error) {
+        alert("刪除失敗: " + error.message);
+        console.error("刪除失敗", error);
+      } else {
+        // 刪除成功，重新整理列表
+        await window.refreshModal();
+      }
+    };
+
+    window.updateHolidayById = async function(id, newVal) {
+        if(!newVal) return;
+        const { error } = await supabase.from("holidays").update({description: newVal}).eq("id", id);
+        if(!error) await window.refreshModal();
+    };
+
+    // 一般事件的刪除
+    window.deleteEventById = async function(id) {
+      if(!confirm("確定刪除此行程?")) return;
+      const { error } = await supabase.from("events").delete().eq("id", id);
+      if(error) alert("失敗: "+error.message);
+      else await window.refreshModal();
+    };
+
 
     const today = new Date();
     let deptEvents = {}, holidayList = [];
@@ -202,25 +246,6 @@
       return{start,end};
     }
 
-    // 🔥 全域刪除函式 (確保按鈕一定找得到)
-    window.deleteHolidayById = async function(id) {
-      if(!confirm("確定要刪除這個假日嗎？")) return;
-      console.log("正在刪除假日 ID:", id);
-      const { error } = await supabase.from("holidays").delete().eq("id", id);
-      if (error) {
-        alert("刪除失敗: " + error.message);
-      } else {
-        await refreshModal();
-      }
-    };
-
-    window.updateHolidayById = async function(id, newVal) {
-        if(!newVal) return;
-        console.log("更新假日 ID:", id, newVal);
-        const { error } = await supabase.from("holidays").update({description: newVal}).eq("id", id);
-        if(!error) await refreshModal();
-    }
-
     async function checkWhitelist(email) {
       try {
         const { data, error } = await supabase.from("allowed_users").select("email, dept").eq("email", email).maybeSingle();
@@ -238,7 +263,6 @@
       const {start,end} = ymdRange(year,month);
       
       const hq = await supabase.from("holidays").select("*").gte("date",start).lt("date",end).order("date");
-      // 🔥 確保有 ID
       holidayList = (hq.data||[]).map(r=>({ 
         id: r.id, 
         date: ymdToCompact(r.date), 
@@ -309,7 +333,7 @@
       }
     }
 
-    // 讓 refreshModal 也可以全域存取
+    // 全域刷新
     window.refreshModal = async function() {
       if(!currentDate) return;
       const y=parseInt(currentDate.split("-")[0]), m=parseInt(currentDate.split("-")[1]);
@@ -332,13 +356,9 @@
       const ymd = currentDate.replaceAll("-","");
       const holiday = getHoliday(ymd);
       
-      // 除錯用
-      if(holiday) console.log("渲染假日:", holiday);
-
       // 🔥 假日渲染
       if (holiday) {
         const div = document.createElement("div"); div.className = "event-item";
-        
         const contentSpan = document.createElement("span");
         contentSpan.className = "event-item-content";
         contentSpan.innerHTML = `<span class="badge holiday-badge">假日</span><span class="holiday-text">${holiday.description}</span>`;
@@ -347,23 +367,22 @@
         if (userDept === "KEN") {
           contentSpan.style.cursor="pointer";
           contentSpan.title = "點擊編輯";
+          // 編輯
           contentSpan.onclick = () => {
              const input = document.createElement("input"); 
              input.value = holiday.description; input.style.width="70%";
              contentSpan.innerHTML = ""; contentSpan.appendChild(input); input.focus();
-             
              input.onblur = () => window.updateHolidayById(holiday.id, input.value.trim());
              input.onkeydown = e => { if(e.key==="Enter") window.updateHolidayById(holiday.id, input.value.trim()); };
           };
 
+          // 🔥🔥🔥 刪除按鈕 (這裡改用最原始的 setAttribute，確保一定會觸發全域函式)
           const btn = document.createElement("button"); 
           btn.textContent = "刪除";
           btn.style.marginLeft = "8px";
-          // 🔥 終極解法：使用 function 直接呼叫 global
-          btn.onclick = function(e) {
-             e.stopPropagation();
-             window.deleteHolidayById(holiday.id);
-          };
+          // 將 ID 寫死在 HTML 屬性中，避開任何 JS Scope 問題
+          btn.setAttribute("onclick", `window.deleteHolidayById(${holiday.id}); event.stopPropagation();`);
+          
           div.appendChild(btn);
         }
         list.appendChild(div);
@@ -399,10 +418,7 @@
             span.onclick = () => {
               const input = document.createElement("input"); input.value = ev.description; input.style.width = "80%";
               span.innerHTML=""; span.appendChild(input); input.focus();
-              
-              let isSaving = false;
               const save = async () => {
-                 if(isSaving) return; isSaving = true;
                  const val = input.value.trim();
                  if(val && val !== ev.description) {
                     await supabase.from("events").update({description:val}).eq("id",ev.id);
@@ -411,13 +427,11 @@
               };
               input.onblur=save; input.onkeydown=e=>{if(e.key==="Enter")save()};
             };
+            
             const btn = document.createElement("button"); btn.textContent="刪除"; btn.style.marginLeft="8px";
-            // 這裡也改用 function
-            btn.onclick = function(e) {
-                e.stopPropagation();
-                if(!confirm("確定刪除?")) return;
-                supabase.from("events").delete().eq("id", ev.id).then(() => window.refreshModal());
-            };
+            // 一般事件也改用全域呼叫
+            btn.setAttribute("onclick", `window.deleteEventById(${ev.id}); event.stopPropagation();`);
+            
             div.appendChild(span); div.appendChild(btn);
           } else div.appendChild(span);
           list.appendChild(div);
