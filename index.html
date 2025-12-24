@@ -100,8 +100,9 @@
     .day.weekend, .day.holiday { color: var(--color-HOLIDAY); }
     .day.selected-day { background-color: #ffeeba; border-color: #ffc107; }
     
+    /* 修正: Lunar 字體改小 */
     .lunar { 
-      font-size: 0.65rem; color: #888; margin-top: 2px; 
+      font-size: 0.5rem; color: #888; margin-top: 2px; 
       text-align: center; line-height: 1.2; width: 100%; 
     }
     .lunar.holiday { color: var(--color-HOLIDAY); font-weight: bold; }
@@ -135,7 +136,6 @@
       padding: 12px 6px; border-bottom: 1px solid #f0f0f0; font-size: 0.95rem;
       transition: background-color 0.2s; border-radius: 4px;
     }
-    /* 點擊效果 */
     .event-item.clickable { cursor: pointer; }
     .event-item.clickable:active { background-color: #f1f3f5; }
 
@@ -143,16 +143,18 @@
     .event-item-content { flex: 1; margin-right: 8px; word-break: break-all; line-height: 1.6; display: flex; align-items: center; flex-wrap: wrap; }
     
     .add-section { margin-top: 15px; border-top: 1px solid #ddd; padding-top: 15px; display: none; }
-    .add-btn-container { text-align: center; margin-top: 15px; border-top: 1px solid #f0f0f0; padding-top: 10px; }
+    
+    /* 修正: 移除 border-top */
+    .add-btn-container { text-align: center; margin-top: 15px; padding-top: 10px; }
+    
     .add-btn-container button { width: 100%; padding: 12px; font-weight: bold; background: #f8f9fa; font-size: 1rem; }
     .add-section textarea, .add-section input[type="time"] {
       width: 100%; margin-bottom: 8px; padding: 10px;
       border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 1rem;
     }
 
-    /* 時間輸入框特別調整 */
     .time-inputs input[type="time"] {
-        width: 90px !important; /* 強制寬度變小 */
+        width: 90px !important;
         padding: 4px !important;
         font-size: 0.9rem !important;
         height: 36px;
@@ -165,9 +167,7 @@
       transition: all 0.2s; user-select: none; white-space: nowrap; 
     }
     
-    /* 動態顏色 Class */
     .chip.active { color: white; border-color: transparent; }
-    /* 確保有基礎背景色，避免白字白底 */
     .chip.active.dept-ALL { background: var(--color-ALL); }
     .chip.active.dept-SG2 { background: var(--color-SG2); }
     .chip.active.dept-SG3 { background: var(--color-SG3); }
@@ -184,7 +184,19 @@
       font-weight: normal; vertical-align: middle; white-space: nowrap;
       height: 22px; box-sizing: border-box;
     }
-    .time-badge { background: #e9ecef; color: #495057; font-family: monospace; }
+
+    /* 修正: Time Badge 配合部門顏色 */
+    .time-badge { color: white; opacity: 0.9; font-family: monospace; }
+    /* 若沒有部門 class 則預設灰色 */
+    .time-badge:not(.ALL):not(.SG2):not(.SG3):not(.SG4):not(.SG5):not(.KEN) { background: #e9ecef; color: #495057; }
+    
+    .time-badge.ALL { background-color: var(--color-ALL); }
+    .time-badge.SG2 { background-color: var(--color-SG2); }
+    .time-badge.SG3 { background-color: var(--color-SG3); }
+    .time-badge.SG4 { background-color: var(--color-SG4); }
+    .time-badge.SG5 { background-color: var(--color-SG5); }
+    .time-badge.KEN { background-color: var(--color-KEN); }
+
     .dept-badge { color: #fff; }
     .dept-badge.ALL { background-color: var(--color-ALL); }
     .dept-badge.SG2 { background-color: var(--color-SG2); }
@@ -194,9 +206,8 @@
     .dept-badge.KEN { background-color: var(--color-KEN); }
     
     .holiday-badge { background-color: var(--color-HOLIDAY); color: white; }
-    .holiday-text { color: var(--color-HOLIDAY); font-weight: bold; font-size: 0.85rem; } /* 假日字體縮小 */
+    .holiday-text { color: var(--color-HOLIDAY); font-weight: bold; font-size: 0.85rem; }
     
-    /* 類別泡泡 (動態顏色) */
     .tag-badge { color: #fff; opacity: 0.9; }
     .tag-badge.ALL { background-color: var(--color-ALL); }
     .tag-badge.SG2 { background-color: var(--color-SG2); }
@@ -223,7 +234,17 @@
     const supabaseKey = "sb_publishable_XEf_IKh9aiU7if2jrNHbmQ_Fvrqvjhd";
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // 🔥 全域登出函式
+    // XSS 防護 Helper
+    function escapeHtml(text) {
+      if (!text) return "";
+      return text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
     window.logout = async function() {
         if(!confirm("確定要登出嗎？")) return;
         localStorage.clear();
@@ -232,7 +253,6 @@
         window.location.replace(window.location.pathname + "?t=" + new Date().getTime());
     };
 
-    // 🔥 全域刪除/修改函式
     window.deleteHolidayById = async function(id) {
       if(!confirm("確定要刪除這個假日嗎？")) return;
       const { error } = await supabase.from("holidays").delete().eq("id", id);
@@ -278,6 +298,7 @@
       try {
         const { data, error } = await supabase.from("allowed_users").select("email, dept").eq("email", email).maybeSingle();
         if (data) { userDept = (data.dept || "NONE").toUpperCase(); return true; }
+        // 若使用者不在清單中，自動新增並設為 NONE (可視需求關閉此功能)
         await supabase.from("allowed_users").insert([{ email, dept: "NONE" }]);
         userDept = "NONE"; return false;
       } catch (err) { console.error("Auth Error", err); userDept="NONE"; return false; }
@@ -342,9 +363,9 @@
       if(selectedTag) {
          const activeTag = document.querySelector("#tag-container .chip.active");
          if(activeTag) {
-            activeTag.className = "chip active";
-            const currentDeptClass = (dept === "HOLIDAY" || dept === "PRIVATE") ? "dept-KEN" : `dept-${dept}`;
-            activeTag.classList.add(currentDeptClass);
+           activeTag.className = "chip active";
+           const currentDeptClass = (dept === "HOLIDAY" || dept === "PRIVATE") ? "dept-KEN" : `dept-${dept}`;
+           activeTag.classList.add(currentDeptClass);
          }
       }
       
@@ -413,11 +434,11 @@
         const div = document.createElement("div"); div.className = "event-item";
         const contentSpan = document.createElement("span");
         contentSpan.className = "event-item-content";
-        contentSpan.innerHTML = `<span class="badge holiday-badge">假日</span><span class="holiday-text">${holiday.description}</span>`;
+        // 安全處理: 使用 escapeHtml
+        contentSpan.innerHTML = `<span class="badge holiday-badge">假日</span><span class="holiday-text">${escapeHtml(holiday.description)}</span>`;
         div.appendChild(contentSpan);
 
         if (userDept === "KEN") {
-            // KEN 點擊整行即可編輯
             div.classList.add("clickable");
             div.onclick = () => {
                  window.showAddForm(true);
@@ -430,7 +451,6 @@
             const delBtn = document.createElement("button"); 
             delBtn.textContent = "刪除";
             delBtn.style.marginLeft = "8px";
-            // 阻止冒泡，避免觸發編輯
             delBtn.setAttribute("onclick", `event.stopPropagation(); window.deleteHolidayById(${holiday.id});`);
             div.appendChild(delBtn);
         }
@@ -444,20 +464,21 @@
         events.forEach(ev => {
           const div = document.createElement("div"); div.className = "event-item";
           
-          let timeHtml = (!ev.isAllDay && ev.startTime) ? `<span class="badge time-badge">${ev.startTime.slice(0,5)}${ev.endTime?'~'+ev.endTime.slice(0,5):''}</span>` : "";
+          // 修正: time-badge 加入 ev.dept 類別
+          let timeHtml = (!ev.isAllDay && ev.startTime) ? `<span class="badge time-badge ${ev.dept}">${ev.startTime.slice(0,5)}${ev.endTime?'~'+ev.endTime.slice(0,5):''}</span>` : "";
           let deptHtml = `<span class="badge dept-badge ${ev.dept}">${ev.dept}</span>`;
           let catHtml = "";
           if (ev.category) {
-             catHtml = `<span class="badge tag-badge ${ev.dept}">${ev.category}</span>`;
+             catHtml = `<span class="badge tag-badge ${ev.dept}">${escapeHtml(ev.category)}</span>`;
           }
 
           const span = document.createElement("span"); 
           span.className = `event-item-content dept-text-${ev.dept}`;
-          span.innerHTML = `${timeHtml}${deptHtml}${catHtml}${ev.description}`;
+          // 安全處理: 使用 escapeHtml
+          span.innerHTML = `${timeHtml}${deptHtml}${catHtml}${escapeHtml(ev.description)}`;
           div.appendChild(span);
 
           if (canOperateDept(ev.dept)) {
-            // 有權限則點擊整行編輯
             div.classList.add("clickable");
             div.onclick = () => {
                 window.showAddForm(true);
@@ -478,7 +499,6 @@
             };
 
             const delBtn = document.createElement("button"); delBtn.textContent="刪除"; delBtn.style.marginLeft="8px";
-            // 阻止冒泡
             delBtn.setAttribute("onclick", `event.stopPropagation(); window.deleteEventById(${ev.id});`);
             div.appendChild(delBtn);
           }
@@ -487,14 +507,12 @@
       }
     }
 
-    // 🔥 修正：開啟新增表單時，如果是「新增」模式 (!isEdit)，要清空欄位
     window.showAddForm = function(isEdit = false) {
       document.getElementById("add-form-container").style.display = "block";
       document.getElementById("show-add-btn").style.display = "none";
       document.getElementById("confirm-btn").textContent = isEdit ? "確認修改" : "確認新增";
       
       if(!isEdit) {
-         // 🔥 清除殘存資料
          isEditingEventId = null;
          document.getElementById("new-desc").value = "";
          document.getElementById("is-all-day").checked = true;
@@ -502,14 +520,12 @@
          document.getElementById("end-time").value = "";
          window.toggleTimeInputs();
          
-         // 清除標籤選取
          selectedTag = "";
          document.querySelectorAll("#tag-container .chip").forEach(c => {
              c.classList.remove("active");
              c.className = "chip"; 
          });
 
-         // 重置部門泡泡 (預設點擊第一個，通常是 ALL 或 使用者部門)
          const deptChips = document.querySelectorAll("#dept-bubbles .chip");
          if(deptChips.length > 0) {
              deptChips[0].click();
@@ -658,7 +674,9 @@
         if (dayOfWeek===0 || dayOfWeek===6) el.classList.add("weekend");
         if (selectedDates.has(ymd)) el.classList.add("selected-day");
 
-        el.innerHTML = `<strong>${d}</strong><div class="lunar ${holiday?.isHoliday ? "holiday" : ""}">${holiday?.description || lunar.getDayInChinese()}</div>`;
+        // 安全處理: Holiday description 也需 escape
+        const safeHolidayDesc = escapeHtml(holiday?.description);
+        el.innerHTML = `<strong>${d}</strong><div class="lunar ${holiday?.isHoliday ? "holiday" : ""}">${safeHolidayDesc || lunar.getDayInChinese()}</div>`;
 
         if (events.length > 0) {
            const dots = document.createElement("div"); dots.className = "event-dots";
@@ -681,8 +699,8 @@
         if (!/Mobi|Android/i.test(navigator.userAgent)) {
            el.onmouseenter = (e) => {
               const tips = [];
-              if(holiday?.description) tips.push(`【假日】${holiday.description}`);
-              events.forEach(ev => tips.push(`${(!ev.isAllDay&&ev.startTime)?'['+ev.startTime.slice(0,5)+'] ':''}${ev.description}`));
+              if(holiday?.description) tips.push(`【假日】${escapeHtml(holiday.description)}`);
+              events.forEach(ev => tips.push(`${(!ev.isAllDay&&ev.startTime)?'['+ev.startTime.slice(0,5)+'] ':''}${escapeHtml(ev.description)}`));
               if(!tips.length) return;
               let t = document.createElement("div"); t.className = "hover-tooltip"; t.innerHTML = tips.join("<br>");
               document.body.appendChild(t);
@@ -716,19 +734,19 @@
        const dates = Array.from(selectedDates).sort();
        let text = "";
        for(const d of dates) {
-          const y=parseInt(d.slice(0,4)), m=parseInt(d.slice(4,6)), dd=d.slice(6,8);
-          await fetchMonthData(y, m);
-          const h = holidayList.find(x => x.date === d);
-          let events = [];
-          if (currentDept === "ALL") events = [...deptEvents.ALL, ...deptEvents.SG2, ...deptEvents.SG3, ...deptEvents.SG4, ...deptEvents.SG5, ...(userDept === "KEN" && isPrivateVisible ? deptEvents.KEN : [])].filter(ev => ev.date === d);
-          else if (currentDept === "PRIVATE") events = (deptEvents.KEN||[]).filter(ev => ev.date === d);
-          else events = (deptEvents[currentDept]||[]).filter(ev => ev.date === d);
-          
-          text += `${y}-${m}-${dd}\n`;
-          if(h) text += `【假日】${h.description}\n`;
-          events.forEach(ev => text += `${ev.description} ${(!ev.isAllDay&&ev.startTime)?ev.startTime.slice(0,5):''}\n`);
-          if(!h && events.length===0) text += "(無事件)\n";
-          text += "\n";
+         const y=parseInt(d.slice(0,4)), m=parseInt(d.slice(4,6)), dd=d.slice(6,8);
+         await fetchMonthData(y, m);
+         const h = holidayList.find(x => x.date === d);
+         let events = [];
+         if (currentDept === "ALL") events = [...deptEvents.ALL, ...deptEvents.SG2, ...deptEvents.SG3, ...deptEvents.SG4, ...deptEvents.SG5, ...(userDept === "KEN" && isPrivateVisible ? deptEvents.KEN : [])].filter(ev => ev.date === d);
+         else if (currentDept === "PRIVATE") events = (deptEvents.KEN||[]).filter(ev => ev.date === d);
+         else events = (deptEvents[currentDept]||[]).filter(ev => ev.date === d);
+         
+         text += `${y}-${m}-${dd}\n`;
+         if(h) text += `【假日】${h.description}\n`;
+         events.forEach(ev => text += `${ev.description} ${(!ev.isAllDay&&ev.startTime)?ev.startTime.slice(0,5):''}\n`);
+         if(!h && events.length===0) text += "(無事件)\n";
+         text += "\n";
        }
        if (navigator.share) try{await navigator.share({title:"行程",text});}catch{} else { navigator.clipboard.writeText(text); alert("已複製"); }
     };
@@ -741,25 +759,25 @@
        let s = new Date(start), e = new Date(end); if(s>e) [s,e] = [e,s];
        let ics = "BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//ServicesCenter//TW\n";
        while(s<=e) {
-          const y=s.getFullYear(), m=s.getMonth()+1, d=s.getDate();
-          const ymd = `${y}${pad2(m)}${pad2(d)}`;
-          await fetchMonthData(y, m);
-          const h = holidayList.find(x=>x.date===ymd);
-          let events = [];
-          if (currentDept === "ALL") events = [...deptEvents.ALL, ...deptEvents.SG2, ...deptEvents.SG3, ...deptEvents.SG4, ...deptEvents.SG5, ...(userDept === "KEN" && isPrivateVisible ? deptEvents.KEN : [])].filter(ev => ev.date === ymd);
-          else if (currentDept === "PRIVATE") events = (deptEvents.KEN||[]).filter(ev => ev.date === ymd);
-          else events = (deptEvents[currentDept]||[]).filter(ev => ev.date === ymd);
+         const y=s.getFullYear(), m=s.getMonth()+1, d=s.getDate();
+         const ymd = `${y}${pad2(m)}${pad2(d)}`;
+         await fetchMonthData(y, m);
+         const h = holidayList.find(x=>x.date===ymd);
+         let events = [];
+         if (currentDept === "ALL") events = [...deptEvents.ALL, ...deptEvents.SG2, ...deptEvents.SG3, ...deptEvents.SG4, ...deptEvents.SG5, ...(userDept === "KEN" && isPrivateVisible ? deptEvents.KEN : [])].filter(ev => ev.date === ymd);
+         else if (currentDept === "PRIVATE") events = (deptEvents.KEN||[]).filter(ev => ev.date === ymd);
+         else events = (deptEvents[currentDept]||[]).filter(ev => ev.date === ymd);
 
-          if(h) ics += `BEGIN:VEVENT\nDTSTART;VALUE=DATE:${ymd}\nSUMMARY:【假日】${h.description}\nEND:VEVENT\n`;
-          events.forEach(ev => {
-             if (ev.isAllDay) ics += `BEGIN:VEVENT\nDTSTART;VALUE=DATE:${ymd}\nSUMMARY:${ev.description}\nEND:VEVENT\n`;
-             else {
-                const sT = ev.startTime.replaceAll(":","").slice(0,4)+"00";
-                const eT = ev.endTime ? ev.endTime.replaceAll(":","").slice(0,4)+"00" : sT;
-                ics += `BEGIN:VEVENT\nDTSTART:${ymd}T${sT}\nDTEND:${ymd}T${eT}\nSUMMARY:${ev.description}\nEND:VEVENT\n`;
-             }
-          });
-          s.setDate(s.getDate()+1);
+         if(h) ics += `BEGIN:VEVENT\nDTSTART;VALUE=DATE:${ymd}\nSUMMARY:【假日】${h.description}\nEND:VEVENT\n`;
+         events.forEach(ev => {
+            if (ev.isAllDay) ics += `BEGIN:VEVENT\nDTSTART;VALUE=DATE:${ymd}\nSUMMARY:${ev.description}\nEND:VEVENT\n`;
+            else {
+               const sT = ev.startTime.replaceAll(":","").slice(0,4)+"00";
+               const eT = ev.endTime ? ev.endTime.replaceAll(":","").slice(0,4)+"00" : sT;
+               ics += `BEGIN:VEVENT\nDTSTART:${ymd}T${sT}\nDTEND:${ymd}T${eT}\nSUMMARY:${ev.description}\nEND:VEVENT\n`;
+            }
+         });
+         s.setDate(s.getDate()+1);
        }
        ics += "END:VCALENDAR";
        const b = new Blob([ics], {type:"text/calendar"});
@@ -804,9 +822,9 @@
        const yearDd = document.getElementById("yearDropdown"), yToggle = yearDd.querySelector(".dropdown-toggle"), yMenu = yearDd.querySelector(".dropdown-menu");
        yMenu.innerHTML=""; const cy = today.getFullYear();
        for(let y=cy-5; y<=cy+5; y++){
-          const d = document.createElement("div"); d.textContent = y+"年"; d.dataset.value=y;
-          d.onclick=()=>{ yToggle.textContent=d.textContent; yToggle.dataset.value=y; updateCalendar(); yMenu.style.display="none"; };
-          yMenu.appendChild(d);
+         const d = document.createElement("div"); d.textContent = y+"年"; d.dataset.value=y;
+         d.onclick=()=>{ yToggle.textContent=d.textContent; yToggle.dataset.value=y; updateCalendar(); yMenu.style.display="none"; };
+         yMenu.appendChild(d);
        }
        yToggle.textContent=cy+" 年"; yToggle.dataset.value=cy;
        yToggle.onclick = () => yMenu.style.display = yMenu.style.display==="block"?"none":"block";
@@ -821,28 +839,28 @@
        const dDd = document.getElementById("deptDropdown"), dMenu = dDd.querySelector(".dropdown-menu"), dToggle = dDd.querySelector(".dropdown-toggle");
        const oldP = dMenu.querySelector('[data-value="PRIVATE"]'); if(oldP) oldP.remove();
        if(userDept==="KEN") {
-          const div = document.createElement("div"); div.className="dept-text-KEN"; div.dataset.value="PRIVATE"; div.textContent="KEN 私人日程";
-          dMenu.appendChild(div);
-          div.onclick=()=>{ currentDept="PRIVATE"; localStorage.setItem("selectedDept","PRIVATE"); dToggle.textContent=div.textContent; dToggle.className="dropdown-toggle dept-text-KEN"; dMenu.style.display="none"; updateCalendar(); };
-          
-          const pToggle = document.getElementById("privateToggle");
-          pToggle.style.display="flex"; 
-          pToggle.innerHTML = `<label class="switch"><input type="checkbox" id="privateCheckbox"><span class="slider"></span></label><span style="margin-left:8px; font-size:0.9rem;">私人</span>`;
-          
-          const ck = document.getElementById("privateCheckbox");
-          ck.checked = isPrivateVisible;
-          ck.onchange = (e)=>{ isPrivateVisible=e.target.checked; localStorage.setItem("showPrivate", isPrivateVisible); updateCalendar(); };
+         const div = document.createElement("div"); div.className="dept-text-KEN"; div.dataset.value="PRIVATE"; div.textContent="KEN 私人日程";
+         dMenu.appendChild(div);
+         div.onclick=()=>{ currentDept="PRIVATE"; localStorage.setItem("selectedDept","PRIVATE"); dToggle.textContent=div.textContent; dToggle.className="dropdown-toggle dept-text-KEN"; dMenu.style.display="none"; updateCalendar(); };
+         
+         const pToggle = document.getElementById("privateToggle");
+         pToggle.style.display="flex"; 
+         pToggle.innerHTML = `<label class="switch"><input type="checkbox" id="privateCheckbox"><span class="slider"></span></label><span style="margin-left:8px; font-size:0.9rem;">私人</span>`;
+         
+         const ck = document.getElementById("privateCheckbox");
+         ck.checked = isPrivateVisible;
+         ck.onchange = (e)=>{ isPrivateVisible=e.target.checked; localStorage.setItem("showPrivate", isPrivateVisible); updateCalendar(); };
        }
 
        dToggle.onclick = () => dMenu.style.display=dMenu.style.display==="block"?"none":"block";
        dMenu.querySelectorAll("div:not([data-value='PRIVATE'])").forEach(it=>{
-          it.onclick=()=>{ currentDept=it.dataset.value; localStorage.setItem("selectedDept",currentDept); dToggle.textContent=it.textContent; dToggle.className="dropdown-toggle "+("dept-text-"+it.dataset.value); dMenu.style.display="none"; updateCalendar(); };
+         it.onclick=()=>{ currentDept=it.dataset.value; localStorage.setItem("selectedDept",currentDept); dToggle.textContent=it.textContent; dToggle.className="dropdown-toggle "+("dept-text-"+it.dataset.value); dMenu.style.display="none"; updateCalendar(); };
        });
        const saved = localStorage.getItem("selectedDept");
        if(saved && (saved!=="PRIVATE" || userDept==="KEN")) {
-          currentDept = saved;
-          const target = dMenu.querySelector(`div[data-value="${saved}"]`);
-          if(target) { dToggle.textContent=target.textContent; dToggle.className="dropdown-toggle "+("dept-text-"+saved); }
+         currentDept = saved;
+         const target = dMenu.querySelector(`div[data-value="${saved}"]`);
+         if(target) { dToggle.textContent=target.textContent; dToggle.className="dropdown-toggle "+("dept-text-"+saved); }
        }
     }
 
@@ -855,22 +873,21 @@
       if (["SG2", "SG3", "SG4", "SG5"].includes(userDept)) opts = [userDept];
 
       if (opts.length === 1 && userDept !== "ALL" && userDept !== "KEN") {
-         container.style.display = "none";
-         selectedDeptBubble = opts[0];
-         return;
+          container.style.display = "none";
+          selectedDeptBubble = opts[0];
+          return;
       } else {
-         container.style.display = "flex";
+          container.style.display = "flex";
       }
 
       opts.forEach(d => {
         const chip = document.createElement("div"); chip.className = "chip";
-        // 🔥 這裡修復了：添加對應的部門 class，確保點擊後的 active 顏色正確顯示
         if(d === "HOLIDAY") { 
             chip.textContent = "假日"; 
             chip.classList.add("holiday-chip"); 
         } else { 
             chip.textContent = d; 
-            chip.classList.add(`dept-${d}`); // 加入部門 class
+            chip.classList.add(`dept-${d}`); 
         }
         
         chip.onclick = () => window.selectDeptBubble(chip, d);
