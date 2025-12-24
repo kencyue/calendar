@@ -4,7 +4,11 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>服務技術中心行事曆</title>
+  
   <script src="https://cdn.jsdelivr.net/npm/lunar-javascript@1.6.6/lunar.min.js"></script>
+  
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
   
   <style>
     /* === 基礎變數 === */
@@ -16,7 +20,6 @@
       --border-color: #ddd;
       --shadow: 0 4px 12px rgba(0,0,0,0.1);
       
-      /* 部門顏色 */
       --color-ALL: #000000;
       --color-SG2: #007bff;
       --color-SG3: #28a745;
@@ -100,14 +103,12 @@
     .day.weekend, .day.holiday { color: var(--color-HOLIDAY); }
     .day.selected-day { background-color: #ffeeba; border-color: #ffc107; }
     
-    /* 修正: Lunar 字體改小 */
     .lunar { 
       font-size: 0.5rem; color: #888; margin-top: 2px; 
       text-align: center; line-height: 1.2; width: 100%; 
     }
     .lunar.holiday { color: var(--color-HOLIDAY); font-weight: bold; }
 
-    /* === 事件點點 === */
     .event-dots { display: flex; gap: 3px; margin-top: 4px; flex-wrap: wrap; justify-content: center; }
     .dot { width: 6px; height: 6px; border-radius: 50%; }
     .dot.ALL { background: var(--color-ALL); }
@@ -138,27 +139,32 @@
     }
     .event-item.clickable { cursor: pointer; }
     .event-item.clickable:active { background-color: #f1f3f5; }
-
     .event-item:last-child { border-bottom: none; }
     .event-item-content { flex: 1; margin-right: 8px; word-break: break-all; line-height: 1.6; display: flex; align-items: center; flex-wrap: wrap; }
     
     .add-section { margin-top: 15px; border-top: 1px solid #ddd; padding-top: 15px; display: none; }
-    
-    /* 修正: 移除 border-top */
     .add-btn-container { text-align: center; margin-top: 15px; padding-top: 10px; }
-    
     .add-btn-container button { width: 100%; padding: 12px; font-weight: bold; background: #f8f9fa; font-size: 1rem; }
-    .add-section textarea, .add-section input[type="time"] {
+    
+    .add-section textarea {
       width: 100%; margin-bottom: 8px; padding: 10px;
       border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 1rem;
     }
-
-    .time-inputs input[type="time"] {
-        width: 90px !important;
-        padding: 4px !important;
-        font-size: 0.9rem !important;
-        height: 36px;
+    
+    /* 🔥 時間輸入框特別樣式 (配合 Flatpickr) */
+    .time-inputs input.time-picker-input {
+        width: 80px !important;
+        padding: 8px 4px !important;
+        font-size: 1rem !important;
+        height: 38px;
+        text-align: center;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        background: #fff;
+        cursor: pointer;
     }
+    /* 強制 Flatpickr 在 Modal 之上 */
+    .flatpickr-calendar { z-index: 3000 !important; }
 
     .chip-group { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
     .chip {
@@ -166,7 +172,6 @@
       font-size: 0.9rem; cursor: pointer; background: #f8f9fa; color: #555;
       transition: all 0.2s; user-select: none; white-space: nowrap; 
     }
-    
     .chip.active { color: white; border-color: transparent; }
     .chip.active.dept-ALL { background: var(--color-ALL); }
     .chip.active.dept-SG2 { background: var(--color-SG2); }
@@ -176,7 +181,6 @@
     .chip.active.dept-KEN { background: var(--color-KEN); }
     .chip.holiday-chip.active { background: var(--color-HOLIDAY); border-color: var(--color-HOLIDAY); }
 
-    /* === 徽章 === */
     .badge {
       display: inline-flex; align-items: center; justify-content: center;
       padding: 2px 8px; border-radius: 12px;
@@ -184,12 +188,8 @@
       font-weight: normal; vertical-align: middle; white-space: nowrap;
       height: 22px; box-sizing: border-box;
     }
-
-    /* 修正: Time Badge 配合部門顏色 */
     .time-badge { color: white; opacity: 0.9; font-family: monospace; }
-    /* 若沒有部門 class 則預設灰色 */
     .time-badge:not(.ALL):not(.SG2):not(.SG3):not(.SG4):not(.SG5):not(.KEN) { background: #e9ecef; color: #495057; }
-    
     .time-badge.ALL { background-color: var(--color-ALL); }
     .time-badge.SG2 { background-color: var(--color-SG2); }
     .time-badge.SG3 { background-color: var(--color-SG3); }
@@ -234,16 +234,23 @@
     const supabaseKey = "sb_publishable_XEf_IKh9aiU7if2jrNHbmQ_Fvrqvjhd";
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // XSS 防護 Helper
     function escapeHtml(text) {
       if (!text) return "";
-      return text
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
+      return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
     }
+
+    // 🔥 初始化 Flatpickr
+    // 等待 DOM 載入後執行
+    window.addEventListener('DOMContentLoaded', () => {
+        flatpickr(".time-picker-input", {
+            enableTime: true,
+            noCalendar: true,
+            dateFormat: "H:i",
+            time_24hr: true,
+            minuteIncrement: 10, // 設定分鐘間隔為 10，方便快速選取
+            disableMobile: "true" // 強制手機也使用 Flatpickr 的 UI (不然 iOS 原生很難用)
+        });
+    });
 
     window.logout = async function() {
         if(!confirm("確定要登出嗎？")) return;
@@ -298,7 +305,6 @@
       try {
         const { data, error } = await supabase.from("allowed_users").select("email, dept").eq("email", email).maybeSingle();
         if (data) { userDept = (data.dept || "NONE").toUpperCase(); return true; }
-        // 若使用者不在清單中，自動新增並設為 NONE (可視需求關閉此功能)
         await supabase.from("allowed_users").insert([{ email, dept: "NONE" }]);
         userDept = "NONE"; return false;
       } catch (err) { console.error("Auth Error", err); userDept="NONE"; return false; }
@@ -368,7 +374,6 @@
            activeTag.classList.add(currentDeptClass);
          }
       }
-      
       window.toggleTagsVisibility();
     }
 
@@ -429,12 +434,10 @@
       const ymd = currentDate.replaceAll("-","");
       const holiday = getHoliday(ymd);
       
-      // 顯示假日
       if (holiday) {
         const div = document.createElement("div"); div.className = "event-item";
         const contentSpan = document.createElement("span");
         contentSpan.className = "event-item-content";
-        // 安全處理: 使用 escapeHtml
         contentSpan.innerHTML = `<span class="badge holiday-badge">假日</span><span class="holiday-text">${escapeHtml(holiday.description)}</span>`;
         div.appendChild(contentSpan);
 
@@ -447,7 +450,6 @@
                  document.getElementById("new-desc").value = holiday.description;
                  isEditingEventId = { type: 'holiday', id: holiday.id };
             };
-
             const delBtn = document.createElement("button"); 
             delBtn.textContent = "刪除";
             delBtn.style.marginLeft = "8px";
@@ -464,7 +466,6 @@
         events.forEach(ev => {
           const div = document.createElement("div"); div.className = "event-item";
           
-          // 修正: time-badge 加入 ev.dept 類別
           let timeHtml = (!ev.isAllDay && ev.startTime) ? `<span class="badge time-badge ${ev.dept}">${ev.startTime.slice(0,5)}${ev.endTime?'~'+ev.endTime.slice(0,5):''}</span>` : "";
           let deptHtml = `<span class="badge dept-badge ${ev.dept}">${ev.dept}</span>`;
           let catHtml = "";
@@ -474,7 +475,6 @@
 
           const span = document.createElement("span"); 
           span.className = `event-item-content dept-text-${ev.dept}`;
-          // 安全處理: 使用 escapeHtml
           span.innerHTML = `${timeHtml}${deptHtml}${catHtml}${escapeHtml(ev.description)}`;
           div.appendChild(span);
 
@@ -491,13 +491,13 @@
                 document.getElementById("is-all-day").checked = ev.isAllDay;
                 window.toggleTimeInputs();
                 if(!ev.isAllDay) {
-                   document.getElementById("start-time").value = ev.startTime;
-                   document.getElementById("end-time").value = ev.endTime;
+                   // Flatpickr 會監控 input value 變化，直接賦值即可
+                   document.getElementById("start-time").value = ev.startTime ? ev.startTime.slice(0,5) : "";
+                   document.getElementById("end-time").value = ev.endTime ? ev.endTime.slice(0,5) : "";
                 }
                 document.getElementById("new-desc").value = ev.description;
                 isEditingEventId = { type: 'event', id: ev.id };
             };
-
             const delBtn = document.createElement("button"); delBtn.textContent="刪除"; delBtn.style.marginLeft="8px";
             delBtn.setAttribute("onclick", `event.stopPropagation(); window.deleteEventById(${ev.id});`);
             div.appendChild(delBtn);
@@ -581,7 +581,6 @@
 
       if (dept === "HOLIDAY") {
          if (userDept !== "KEN") { alert("權限不足"); return; }
-         
          if (isEditingEventId && isEditingEventId.type === 'holiday') {
             await supabase.from("holidays").update({ description: desc }).eq("id", isEditingEventId.id);
          } else {
@@ -674,7 +673,6 @@
         if (dayOfWeek===0 || dayOfWeek===6) el.classList.add("weekend");
         if (selectedDates.has(ymd)) el.classList.add("selected-day");
 
-        // 安全處理: Holiday description 也需 escape
         const safeHolidayDesc = escapeHtml(holiday?.description);
         el.innerHTML = `<strong>${d}</strong><div class="lunar ${holiday?.isHoliday ? "holiday" : ""}">${safeHolidayDesc || lunar.getDayInChinese()}</div>`;
 
@@ -785,19 +783,16 @@
        document.getElementById("exportRangeModal").style.display = "none";
     };
 
-async function login(){
-  const redirectUrl = window.location.origin + window.location.pathname;
-  await supabase.auth.signInWithOAuth({ 
-    provider: "google", 
-    options: {
-      redirectTo: redirectUrl,
-      // 🔥 重點：強制 Google 顯示帳號選擇畫面
-      queryParams: {
-        prompt: 'select_account' 
-      }
-    } 
-  });
-}
+    async function login(){
+      const redirectUrl = window.location.origin + window.location.pathname;
+      await supabase.auth.signInWithOAuth({ 
+          provider:"google", 
+          options:{
+              redirectTo: redirectUrl,
+              queryParams: { prompt: 'select_account' }
+          } 
+      });
+    }
     window.login = login;
     
     window.logout = async () => {
@@ -1004,9 +999,9 @@ async function login(){
              <span style="font-size:0.9rem; margin-left:8px; flex:1;">整天</span>
              
              <div id="time-inputs" class="time-inputs hidden" style="display:flex; gap:5px; align-items:center;">
-               <input type="time" id="start-time"> 
+               <input type="text" id="start-time" class="time-picker-input" placeholder="開始"> 
                <span>~</span>
-               <input type="time" id="end-time">
+               <input type="text" id="end-time" class="time-picker-input" placeholder="結束">
              </div>
           </div>
 
