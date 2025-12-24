@@ -671,7 +671,29 @@
       await supabase.auth.signInWithOAuth({ provider:"google", options:{redirectTo: redirectUrl} });
     }
     window.login = login;
-    window.logout = async () => { await supabase.auth.signOut(); localStorage.removeItem("supabase.auth.token"); userSession=null; userDept="NONE"; window.location.reload(); };
+    // 🔥 強力登出函式
+    window.logout = async () => {
+      // 1. 呼叫 Supabase 登出接口
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        console.error("Supabase 登出錯誤:", error.message);
+      }
+
+      // 2. 🔥 核彈級清除：不管 Supabase 有沒有清乾淨，我們手動把瀏覽器緩存全清空
+      localStorage.clear();
+      sessionStorage.clear();
+
+      // 3. 重置變數
+      userSession = null;
+      userDept = "NONE";
+
+      // 4. 更新 UI (不用重整頁面，直接切換顯示)
+      handleSession(null);
+      
+      // 5. 最後再重整一次確保乾淨 (可選)
+      window.location.reload();
+    };
 
     async function handleSession(session) {
       userSession = session; userDept = "NONE";
