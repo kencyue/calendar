@@ -785,10 +785,19 @@
        document.getElementById("exportRangeModal").style.display = "none";
     };
 
-    async function login(){
-      const redirectUrl = window.location.origin + window.location.pathname;
-      await supabase.auth.signInWithOAuth({ provider:"google", options:{redirectTo: redirectUrl} });
-    }
+async function login(){
+  const redirectUrl = window.location.origin + window.location.pathname;
+  await supabase.auth.signInWithOAuth({ 
+    provider: "google", 
+    options: {
+      redirectTo: redirectUrl,
+      // 🔥 重點：強制 Google 顯示帳號選擇畫面
+      queryParams: {
+        prompt: 'select_account' 
+      }
+    } 
+  });
+}
     window.login = login;
     
     window.logout = async () => {
