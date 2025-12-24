@@ -487,11 +487,34 @@
       }
     }
 
+    // 🔥 修正：開啟新增表單時，如果是「新增」模式 (!isEdit)，要清空欄位
     window.showAddForm = function(isEdit = false) {
       document.getElementById("add-form-container").style.display = "block";
       document.getElementById("show-add-btn").style.display = "none";
       document.getElementById("confirm-btn").textContent = isEdit ? "確認修改" : "確認新增";
-      if(!isEdit) isEditingEventId = null;
+      
+      if(!isEdit) {
+         // 🔥 清除殘存資料
+         isEditingEventId = null;
+         document.getElementById("new-desc").value = "";
+         document.getElementById("is-all-day").checked = true;
+         document.getElementById("start-time").value = "";
+         document.getElementById("end-time").value = "";
+         window.toggleTimeInputs();
+         
+         // 清除標籤選取
+         selectedTag = "";
+         document.querySelectorAll("#tag-container .chip").forEach(c => {
+             c.classList.remove("active");
+             c.className = "chip"; 
+         });
+
+         // 重置部門泡泡 (預設點擊第一個，通常是 ALL 或 使用者部門)
+         const deptChips = document.querySelectorAll("#dept-bubbles .chip");
+         if(deptChips.length > 0) {
+             deptChips[0].click();
+         }
+      }
     }
     
     window.hideAddForm = function() {
