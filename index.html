@@ -7,13 +7,14 @@
   <script src="https://cdn.jsdelivr.net/npm/lunar-javascript@1.6.6/lunar.min.js"></script>
   
   <style>
-    /* === 全域與基礎樣式 === */
+    /* === 基礎變數 === */
     :root {
       --primary: #007bff;
       --bg-color: #f4f6f9;
       --card-bg: #ffffff;
       --text-color: #333;
       --border-color: #ddd;
+      --shadow: 0 4px 12px rgba(0,0,0,0.1);
     }
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -21,17 +22,18 @@
       color: var(--text-color);
       margin: 0;
       padding: 10px;
-      padding-bottom: 80px; /* 手機版底部留白 */
+      padding-bottom: 80px;
     }
     h2 { text-align: center; margin: 10px 0; font-size: 1.5rem; }
 
-    /* === 控制列與按鈕 === */
+    /* === 控制列 === */
     .controls {
       display: flex;
       justify-content: center;
       gap: 8px;
       margin-bottom: 10px;
       flex-wrap: wrap;
+      align-items: center;
     }
     button {
       background: var(--card-bg);
@@ -40,9 +42,9 @@
       border-radius: 6px;
       cursor: pointer;
       font-size: 0.9rem;
-      transition: background 0.2s;
+      transition: all 0.2s;
     }
-    button:active { background: #e9ecef; }
+    button:active { background: #e9ecef; transform: scale(0.98); }
     .btn-primary { background: var(--primary); color: white; border: none; }
     .btn-secondary { background: #6c757d; color: white; border: none; }
     
@@ -60,23 +62,51 @@
     .dropdown-menu {
       display: none;
       position: absolute;
-      top: 100%; left: 0;
+      top: 105%; left: 0;
       background: var(--card-bg);
       border: 1px solid var(--border-color);
-      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      box-shadow: var(--shadow);
       z-index: 1000;
       min-width: 120px;
       border-radius: 6px;
       max-height: 300px;
       overflow-y: auto;
     }
-    .dropdown-menu div {
-      padding: 8px 12px;
-      cursor: pointer;
-      border-bottom: 1px solid #eee;
-    }
+    .dropdown-menu div { padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #eee; }
     .dropdown-menu div:hover { background: #f8f9fa; }
 
+    /* === 滑動開關 (Toggle Switch) === */
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 44px;
+      height: 24px;
+      vertical-align: middle;
+    }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      inset: 0;
+      background-color: #ccc;
+      transition: .4s;
+      border-radius: 34px;
+    }
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .4s;
+      border-radius: 50%;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+    input:checked + .slider { background-color: var(--primary); }
+    input:checked + .slider:before { transform: translateX(20px); }
+    
     /* === 月曆主體 === */
     #calendar {
       display: grid;
@@ -84,7 +114,6 @@
       gap: 4px;
       max-width: 800px;
       margin: 0 auto;
-      transition: transform 0.3s ease, opacity 0.3s ease;
     }
     .weekday-header {
       text-align: center;
@@ -106,182 +135,109 @@
       flex-direction: column;
       align-items: center;
       user-select: none;
+      transition: transform 0.1s;
     }
+    .day:active { transform: scale(0.98); }
     .day.today { border: 2px solid var(--primary); background: #e7f1ff; }
     .day.weekend { color: #dc3545; }
     .day.selected-day { background-color: #ffeeba; border-color: #ffc107; }
     
-    .lunar { font-size: 0.7rem; color: #888; margin-top: 2px; text-align: center; line-height: 1.1; }
+    .lunar { font-size: 0.7rem; color: #888; margin-top: 2px; }
     .lunar.holiday { color: #dc3545; font-weight: bold; }
 
     /* === 事件點點 === */
-    .event-dots {
-      display: flex;
-      gap: 3px;
-      margin-top: 4px;
-      flex-wrap: wrap;
-      justify-content: center;
-    }
+    .event-dots { display: flex; gap: 3px; margin-top: 4px; flex-wrap: wrap; justify-content: center; }
     .dot { width: 6px; height: 6px; border-radius: 50%; }
-
-    /* === 部門顏色定義 (文字色) === */
-    /* 修改：背景透明，文字帶顏色，加粗 */
-    .dept-ALL { color: #dc3545; background: transparent; font-weight: 600; }
-    .dept-SG2 { color: #fd7e14; background: transparent; font-weight: 600; }
-    .dept-SG3 { color: #ffc107; background: transparent; font-weight: 600; text-shadow: 0 0 1px #999;} /* 黃色怕太淺加個陰影 */
-    .dept-SG4 { color: #28a745; background: transparent; font-weight: 600; }
-    .dept-SG5 { color: #007bff; background: transparent; font-weight: 600; }
-    .dept-KEN { color: #6f42c1; background: transparent; font-weight: 600; }
-    
-    /* 月曆上的點點維持背景色 */
     .dot.ALL { background: #dc3545; }
     .dot.SG2 { background: #fd7e14; }
     .dot.SG3 { background: #ffc107; }
     .dot.SG4 { background: #28a745; }
     .dot.SG5 { background: #007bff; }
     .dot.KEN { background: #6f42c1; }
-    
-    /* 下拉選單文字顏色 */
-    .dropdown-menu .dept-SG2 { color: #fd7e14; }
-    .dropdown-menu .dept-SG3 { color: #d39e00; } /* 選單黃色深一點 */
-    .dropdown-menu .dept-SG4 { color: #28a745; }
-    .dropdown-menu .dept-SG5 { color: #007bff; }
-    .dropdown-menu .dept-KEN { color: #6f42c1; }
+
+    /* === 部門文字樣式 === */
+    .dept-ALL { color: #dc3545; font-weight: 600; }
+    .dept-SG2 { color: #fd7e14; font-weight: 600; }
+    .dept-SG3 { color: #d39e00; font-weight: 600; }
+    .dept-SG4 { color: #28a745; font-weight: 600; }
+    .dept-SG5 { color: #007bff; font-weight: 600; }
+    .dept-KEN { color: #6f42c1; font-weight: 600; }
 
     /* === 彈窗 (Modal) === */
     #modal {
       display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.5);
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.4); /* 半透明黑 */
+      backdrop-filter: blur(5px);   /* 🔥 背景模糊效果 */
+      -webkit-backdrop-filter: blur(5px);
       z-index: 2000;
-      justify-content: center;
-      align-items: center;
-      padding: 20px;
+      justify-content: center; align-items: center; padding: 20px;
     }
     .content {
-      background: white;
-      padding: 20px;
-      border-radius: 12px;
-      width: 100%;
-      max-width: 400px;
-      max-height: 85vh;
-      overflow-y: auto;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+      background: white; padding: 20px; border-radius: 16px;
+      width: 100%; max-width: 400px; max-height: 85vh; overflow-y: auto;
+      box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+      animation: modalPop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     }
-    /* 事件列表項目 */
+    @keyframes modalPop { from{transform: scale(0.9); opacity: 0;} to{transform: scale(1); opacity: 1;} }
+    
     .event-item {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 10px 0;
-      border-bottom: 1px solid #eee;
-      font-size: 0.95rem;
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 12px 0; border-bottom: 1px solid #eee; font-size: 0.95rem;
     }
-    .event-item span { flex: 1; word-break: break-all; margin-right: 8px; }
+    .event-item span { flex: 1; margin-right: 8px; word-break: break-all; line-height: 1.5; }
     
-    /* 新增區塊樣式 */
-    .add-section { margin-top: 15px; }
-    .add-section select, .add-section textarea, .add-section input[type="time"] {
-      width: 100%;
-      margin-bottom: 8px;
-      padding: 8px;
-      border: 1px solid #ddd;
-      border-radius: 6px;
-      box-sizing: border-box;
+    .add-section { margin-top: 20px; }
+    .add-section textarea, .add-section input[type="time"] {
+      width: 100%; margin-bottom: 10px; padding: 10px;
+      border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 1rem;
     }
-    .btn-row { display: flex; gap: 10px; justify-content: flex-end; margin-top: 8px; }
 
-    /* === 標籤泡泡 === */
-    .tag-container {
-      display: flex;
-      gap: 6px;
-      margin-bottom: 10px;
-      flex-wrap: wrap;
+    /* === 泡泡標籤 (Chips) === */
+    .chip-group { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+    .chip {
+      padding: 6px 14px; border: 1px solid #ddd; border-radius: 20px;
+      font-size: 0.85rem; cursor: pointer; background: #f8f9fa; color: #555;
+      transition: all 0.2s; user-select: none;
     }
-    .tag-chip {
-      padding: 4px 12px;
-      border: 1px solid #ddd;
-      border-radius: 20px; /* 更圓一點 */
-      font-size: 0.85rem;
-      cursor: pointer;
-      background: #f8f9fa;
-      color: #555;
-      transition: all 0.2s;
-    }
-    .tag-chip.active {
-      background: var(--primary);
-      color: white;
-      border-color: var(--primary);
-    }
-    
-    /* === 時間樣式 === */
-    .time-row {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 10px;
-      font-size: 0.9rem;
-    }
-    .time-inputs {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-    }
-    .time-badge {
-      background: #eee;
-      color: #555;
-      padding: 2px 6px;
-      border-radius: 4px;
-      font-size: 0.8em;
-      margin-right: 5px;
-      font-family: monospace;
-      white-space: nowrap;
+    .chip:hover { background: #eee; }
+    .chip.active { background: var(--primary); color: white; border-color: var(--primary); box-shadow: 0 2px 6px rgba(0,123,255,0.3); }
+
+    /* === 列表中的徽章 (Badges) === */
+    .time-badge, .tag-badge {
+      display: inline-block; padding: 2px 8px; border-radius: 4px;
+      font-size: 0.8em; margin-right: 6px; font-family: monospace;
       vertical-align: middle;
     }
+    .time-badge { background: #f0f0f0; color: #555; }
+    .tag-badge { background: #e7f5ff; color: #007bff; border: 1px solid #bce3ff; }
+
+    /* === 時間選擇列 === */
+    .time-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px; }
+    .time-row label { display: flex; align-items: center; font-size: 0.95rem; cursor: pointer; }
     .hidden { display: none !important; }
 
-    /* === 工具與動畫 === */
+    /* === 其他 === */
     #loading { display: none; text-align: center; padding: 10px; color: #666; }
-    #month-title { text-align: center; font-size: 1.2rem; margin: 10px 0; font-weight: bold; }
-    
-    /* 滑動動畫 class */
-    .slide-left { transform: translateX(-20px); opacity: 0; }
-    .slide-right { transform: translateX(20px); opacity: 0; }
-    .fade-in-left { animation: fadeInLeft 0.3s; }
-    .fade-in-right { animation: fadeInRight 0.3s; }
-    
-    @keyframes fadeInLeft { from { transform: translateX(-20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-    @keyframes fadeInRight { from { transform: translateX(20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-
-    /* 懸浮提示 (桌機) */
     .hover-tooltip {
-      position: absolute;
-      background: rgba(0,0,0,0.85);
-      color: #fff;
-      padding: 6px 10px;
-      border-radius: 6px;
-      font-size: 0.85rem;
-      z-index: 3000;
-      pointer-events: none;
-      white-space: pre-wrap;
-      max-width: 200px;
+      position: absolute; background: rgba(0,0,0,0.85); color: #fff;
+      padding: 6px 10px; border-radius: 6px; font-size: 0.85rem; z-index: 3000; pointer-events: none;
     }
-    .icon-btn { background: none; border: none; padding: 0; cursor: pointer; }
+    .icon-btn { background: none; border: none; padding: 4px; cursor: pointer; border-radius: 50%; transition: background 0.2s; }
+    .icon-btn:hover { background: #f0f0f0; }
 
-    /* 大螢幕微調 */
-    @media (min-width: 768px) {
-      .day { min-height: 100px; padding: 8px; }
-      #calendar { gap: 8px; }
-    }
+    @media (min-width: 768px) { .day { min-height: 100px; padding: 8px; } #calendar { gap: 8px; } }
   </style>
   
- <script type="module">
+  <script type="module">
     import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
     
-    // 🔥 你的專案設定
+    // 🔥 你的專案 URL 和 Key (根據你的要求已更新)
     const supabaseUrl = "https://uiewxojtldhebydjmczh.supabase.co";
+    // 注意：這個 Key (sb_publishable...) 是你指定的，但 Supabase JS 通常需要 anon key (eyJ...)。
+    // 如果登入失敗 401，請務必換回原本的 anon key。
     const supabaseKey = "sb_publishable_XEf_IKh9aiU7if2jrNHbmQ_Fvrqvjhd";
+    
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const today = new Date();
@@ -292,7 +248,10 @@
     let isPrivateVisible = localStorage.getItem("showPrivate") === "true";
     let multiSelectMode = false;
     let selectedDates = new Set();
+    
+    // UI 狀態
     let selectedTag = ""; 
+    let selectedDeptBubble = "ALL"; // 預設部門泡泡
 
     function pad2(n){return String(n).padStart(2,"0");}
     function ymdToCompact(d){return d.replaceAll("-","");}
@@ -303,32 +262,23 @@
       return{start,end};
     }
 
-    // 權限檢查與自動註冊
     async function checkWhitelist(email) {
-      console.log("正在檢查權限:", email);
-      const { data, error } = await supabase.from("allowed_users").select("email, dept").eq("email", email).maybeSingle();
-      
-      if (data) {
-        console.log("找到使用者，部門:", data.dept);
-        userDept = (data.dept || "NONE").toUpperCase();
-        return true;
-      }
-      
-      console.log("新使用者，自動註冊為 NONE");
-      // 如果沒找到，自動新增
-      const { error: insertError } = await supabase.from("allowed_users").insert([{ email, dept: "NONE" }]);
-      if (insertError) console.error("自動註冊失敗:", insertError);
-      
-      userDept = "NONE";
-      return false;
+      try {
+        const { data, error } = await supabase.from("allowed_users").select("email, dept").eq("email", email).maybeSingle();
+        if (data) {
+          userDept = (data.dept || "NONE").toUpperCase();
+          return true;
+        }
+        await supabase.from("allowed_users").insert([{ email, dept: "NONE" }]);
+        userDept = "NONE";
+        return false;
+      } catch (err) { console.error("Auth Check Error", err); userDept="NONE"; return false; }
     }
 
     async function fetchMonthData(year,month){
       const {start,end} = ymdRange(year,month);
       const hq = await supabase.from("holidays").select("*").gte("date",start).lt("date",end).order("date");
-      holidayList = (hq.data||[]).map(r=>({
-        date: ymdToCompact(r.date), description: r.description, isHoliday: r.is_holiday
-      }));
+      holidayList = (hq.data||[]).map(r=>({ date: ymdToCompact(r.date), description: r.description, isHoliday: r.is_holiday }));
 
       const eq = await supabase.from("events").select("*").gte("date",start).lt("date",end).order("date");
       const events = (eq.data||[]).map(r=>({
@@ -347,7 +297,7 @@
       return userDept === dept;
     }
 
-    // UI Toggle functions
+    // --- UI 互動函式 ---
     window.toggleTimeInputs = function() {
       const isAllDay = document.getElementById("is-all-day").checked;
       const inputs = document.getElementById("time-inputs");
@@ -358,17 +308,26 @@
       if (el.classList.contains("active")) {
         el.classList.remove("active"); selectedTag = "";
       } else {
-        document.querySelectorAll(".tag-chip").forEach(c => c.classList.remove("active"));
+        document.querySelectorAll("#tag-container .chip").forEach(c => c.classList.remove("active"));
         el.classList.add("active"); selectedTag = tag;
       }
     }
 
+    window.selectDeptBubble = function(el, dept) {
+      if (el.classList.contains("disabled")) return;
+      document.querySelectorAll("#dept-bubbles .chip").forEach(c => c.classList.remove("active"));
+      el.classList.add("active");
+      selectedDeptBubble = dept;
+      window.toggleTagsVisibility();
+    }
+
     window.toggleTagsVisibility = function() {
-      const dept = document.getElementById("new-dept").value;
+      // 依據目前選到的部門泡泡決定是否顯示標籤
+      const dept = selectedDeptBubble;
       const tagContainer = document.getElementById("tag-container");
       if (dept === "KEN" || dept === "PRIVATE") {
         tagContainer.style.display = "none"; selectedTag = "";
-        document.querySelectorAll(".tag-chip").forEach(c => c.classList.remove("active"));
+        document.querySelectorAll("#tag-container .chip").forEach(c => c.classList.remove("active"));
       } else {
         tagContainer.style.display = "flex";
       }
@@ -419,14 +378,33 @@
       }
 
       if(events.length===0){
-        list.innerHTML += "<div class='event-item'><span>(無事件)</span></div>";
+        list.innerHTML += "<div class='event-item' style='color:#999'><span>(無事件)</span></div>";
       } else {
         events.sort((a,b) => (a.isAllDay===b.isAllDay)?((a.startTime||"")>(b.startTime||"")?1:-1):(a.isAllDay?1:-1));
         events.forEach(ev => {
           const div = document.createElement("div"); div.className = "event-item";
-          let timeHtml = (!ev.isAllDay && ev.startTime) ? `<span class="time-badge">${ev.startTime.slice(0,5)}${ev.endTime?'~'+ev.endTime.slice(0,5):''}</span>` : "";
+          
+          // 🔥 1. 時間徽章
+          let timeHtml = (!ev.isAllDay && ev.startTime) 
+            ? `<span class="time-badge">${ev.startTime.slice(0,5)}${ev.endTime?'~'+ev.endTime.slice(0,5):''}</span>` 
+            : "";
+            
+          // 🔥 2. 泡泡標籤徽章 (解析 description)
+          // 假設儲存格式為 "活動 內容" 或 "[活動] 內容"
+          let dispDesc = ev.description;
+          let tagHtml = "";
+          const tags = ["活動", "出差", "會議"];
+          for(const t of tags) {
+            if(dispDesc.startsWith(t + " ") || dispDesc.startsWith(`[${t}]`)) {
+               tagHtml = `<span class="tag-badge">${t}</span>`;
+               // 移除開頭的標籤字眼，只顯示剩餘內容
+               dispDesc = dispDesc.replace(new RegExp(`^(\\[?${t}\\]?)\\s*`), "");
+               break;
+            }
+          }
+
           const span = document.createElement("span"); span.className = `dept-${ev.dept}`;
-          span.innerHTML = `${timeHtml}${ev.description}`;
+          span.innerHTML = `${timeHtml}${tagHtml}${dispDesc}`; // 組合顯示
 
           if (canOperateDept(ev.dept)) {
             span.style.cursor = "pointer";
@@ -437,7 +415,10 @@
                  if(input.value && input.value!==ev.description) {
                     await supabase.from("events").update({description:input.value}).eq("id",ev.id);
                     await refreshModal();
-                 } else span.innerHTML = `${timeHtml}${ev.description}`;
+                 } else {
+                    // 還原顯示
+                    span.innerHTML = `${timeHtml}${tagHtml}${dispDesc}`;
+                 }
               };
               input.onblur=save; input.onkeydown=e=>{if(e.key==="Enter")save()};
             };
@@ -458,9 +439,9 @@
       document.getElementById("start-time").value = "";
       document.getElementById("end-time").value = "";
       window.toggleTimeInputs();
+      
       selectedTag = "";
-      document.querySelectorAll(".tag-chip").forEach(c => c.classList.remove("active"));
-      window.toggleTagsVisibility();
+      document.querySelectorAll("#tag-container .chip").forEach(c => c.classList.remove("active"));
       
       renderModalList(events);
 
@@ -469,7 +450,7 @@
         addSection.style.display = "none";
       } else {
         addSection.style.display = "block";
-        updateAddDeptOptions();
+        updateAddDeptBubbles(); // 🔥 更新部門泡泡
         window.toggleTagsVisibility(); 
       }
       document.getElementById("modal").style.display="flex";
@@ -482,7 +463,7 @@
 
     async function addEvent() {
       let desc = document.getElementById("new-desc").value.trim();
-      const dept = document.getElementById("new-dept").value;
+      const dept = selectedDeptBubble; // 🔥 改用泡泡變數
       const isAllDay = document.getElementById("is-all-day").checked;
       let startTime = null, endTime = null;
 
@@ -501,6 +482,7 @@
       
       if (userDept!=="ALL" && userDept!=="KEN" && userDept!==dept) { alert("無權限"); return; }
 
+      // 🔥 標籤邏輯：前方加標籤與空格
       if (selectedTag && dept !== "KEN" && dept !== "PRIVATE") {
          desc = `${selectedTag} ${desc}`;
       }
@@ -513,7 +495,7 @@
       if (error) alert("失敗:"+error.message);
       else {
         document.getElementById("new-desc").value = "";
-        selectedTag = ""; document.querySelectorAll(".tag-chip").forEach(c => c.classList.remove("active"));
+        selectedTag = ""; document.querySelectorAll("#tag-container .chip").forEach(c => c.classList.remove("active"));
         await refreshModal();
       }
     }
@@ -683,36 +665,17 @@
        document.getElementById("exportRangeModal").style.display = "none";
     };
 
-    // 🔥 修正後的登入邏輯
+    // 🔥 登入與權限管理
     async function login(){
-      // 強制使用 origin + pathname 避免參數干擾
       const redirectUrl = window.location.origin + window.location.pathname;
-      console.log("Redirecting to:", redirectUrl);
-      
-      const { error } = await supabase.auth.signInWithOAuth({ 
-        provider:"google", 
-        options:{ redirectTo: redirectUrl } 
-      });
-      if(error) alert("登入錯誤: " + error.message);
+      await supabase.auth.signInWithOAuth({ provider:"google", options:{redirectTo: redirectUrl} });
     }
     window.login = login;
-
-    window.logout = async () => { 
-      await supabase.auth.signOut(); 
-      localStorage.removeItem("supabase.auth.token"); 
-      userSession=null; userDept="NONE"; 
-      window.location.reload(); 
-    };
+    window.logout = async () => { await supabase.auth.signOut(); localStorage.removeItem("supabase.auth.token"); userSession=null; userDept="NONE"; window.location.reload(); };
 
     async function handleSession(session) {
-      console.log("Handle Session:", session);
-      userSession = session; 
-      userDept = "NONE";
-      
-      if (session?.user?.email) {
-        await checkWhitelist(session.user.email);
-      }
-      
+      userSession = session; userDept = "NONE";
+      if (session?.user?.email) await checkWhitelist(session.user.email);
       const label = userDept==="ALL"?"(管理員)":userDept==="NONE"?"(唯讀)":`(${userDept})`;
       document.getElementById("loginBtn").style.display = session ? "none" : "inline-block";
       document.getElementById("logoutBtn").style.display = session ? "inline-block" : "none";
@@ -720,14 +683,10 @@
       initMenus();
     }
 
-    // 🔥 監聽登入狀態變化 (這最重要)
-    supabase.auth.onAuthStateChange((event, session) => {
-      console.log("Auth State Change:", event, session);
-      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-        handleSession(session);
-      } else if (event === 'SIGNED_OUT') {
-        handleSession(null);
-      }
+    // 🔥 監聽登入狀態
+    supabase.auth.onAuthStateChange((evt, session) => {
+       if(evt==='SIGNED_IN' || evt==='TOKEN_REFRESHED') handleSession(session);
+       else if(evt==='SIGNED_OUT') handleSession(null);
     });
 
     function initMenus() {
@@ -754,10 +713,17 @@
           const div = document.createElement("div"); div.className="dept-KEN"; div.dataset.value="PRIVATE"; div.textContent="KEN 私人日程";
           dMenu.appendChild(div);
           div.onclick=()=>{ currentDept="PRIVATE"; localStorage.setItem("selectedDept","PRIVATE"); dToggle.textContent=div.textContent; dToggle.className="dropdown-toggle dept-KEN"; dMenu.style.display="none"; updateCalendar(); };
-          document.getElementById("privateToggle").style.display="inline-flex";
-          document.getElementById("privateCheckbox").checked = isPrivateVisible;
-          document.getElementById("privateCheckbox").onchange = (e)=>{ isPrivateVisible=e.target.checked; localStorage.setItem("showPrivate", isPrivateVisible); updateCalendar(); };
+          
+          // 🔥 首頁私人切換 - 滑動開關
+          const pToggle = document.getElementById("privateToggle");
+          pToggle.style.display="flex"; 
+          pToggle.innerHTML = `<label class="switch"><input type="checkbox" id="privateCheckbox"><span class="slider"></span></label><span style="margin-left:8px;">私人</span>`;
+          
+          const ck = document.getElementById("privateCheckbox");
+          ck.checked = isPrivateVisible;
+          ck.onchange = (e)=>{ isPrivateVisible=e.target.checked; localStorage.setItem("showPrivate", isPrivateVisible); updateCalendar(); };
        }
+
        dToggle.onclick = () => dMenu.style.display=dMenu.style.display==="block"?"none":"block";
        dMenu.querySelectorAll("div:not([data-value='PRIVATE'])").forEach(it=>{
           it.onclick=()=>{ currentDept=it.dataset.value; localStorage.setItem("selectedDept",currentDept); dToggle.textContent=it.textContent; dToggle.className="dropdown-toggle "+it.className; dMenu.style.display="none"; updateCalendar(); };
@@ -770,23 +736,38 @@
        }
     }
 
-    function updateAddDeptOptions() {
-      const sel = document.getElementById("new-dept"); sel.innerHTML = "";
+    // 🔥 更新新增介面的部門泡泡
+    function updateAddDeptBubbles() {
+      const container = document.getElementById("dept-bubbles");
+      container.innerHTML = "";
+      
       let opts = [];
-      if (userDept === "ALL") opts = ["ALL", "SG2", "SG3", "SG4", "SG5"];
-      else if (userDept === "KEN") opts = ["ALL", "SG2", "SG3", "SG4", "SG5", "KEN"];
-      else if (["SG2", "SG3", "SG4", "SG5"].includes(userDept)) { opts = [userDept]; sel.disabled=true; }
-      else return;
+      if (userDept === "ALL" || userDept === "KEN") opts = ["ALL", "SG2", "SG3", "SG4", "SG5"];
+      if (userDept === "KEN") opts.push("KEN");
+      
+      // 如果是一般使用者，只能選自己部門
+      if (["SG2", "SG3", "SG4", "SG5"].includes(userDept)) opts = [userDept];
 
-      opts.forEach(d => { const o = document.createElement("option"); o.value=d; o.textContent=d; sel.appendChild(o); });
-      sel.value = opts[0]; sel.disabled = opts.length <= 1; sel.onchange = window.toggleTagsVisibility;
+      opts.forEach(d => {
+        const chip = document.createElement("div");
+        chip.className = "chip";
+        chip.textContent = d;
+        if(opts.length === 1) chip.classList.add("active", "disabled"); // 只有一個時自動鎖定
+        chip.onclick = () => window.selectDeptBubble(chip, d);
+        container.appendChild(chip);
+      });
+
+      // 預設選取
+      if(opts.length > 0) {
+        selectedDeptBubble = opts[0];
+        // 視覺上選取第一個
+        container.firstChild.classList.add("active");
+      }
     }
 
     async function init() {
-      // 嘗試獲取 Session
       const { data: { session } } = await supabase.auth.getSession();
       await handleSession(session);
-      
       document.getElementById("prevMonth").onclick = () => switchMonth("prev");
       document.getElementById("nextMonth").onclick = () => switchMonth("next");
       document.getElementById("todayBtn").onclick = () => {
@@ -818,9 +799,7 @@
   <h2>服務技術中心行事曆</h2>
 
   <div class="controls">
-    <label id="privateToggle" style="display:none; align-items:center; gap:4px; font-size:0.9rem;">
-       <input type="checkbox" id="privateCheckbox" />私人
-    </label>
+    <div id="privateToggle" style="display:none; align-items:center; margin-right:8px;"></div>
     <button id="todayBtn">今日</button>
     
     <div class="dropdown" id="deptDropdown">
@@ -842,17 +821,12 @@
 
   <div class="controls">
     <button id="prevMonth">〈</button>
-    <div class="dropdown" id="yearDropdown">
-      <div class="dropdown-toggle">年份</div>
-      <div class="dropdown-menu"></div>
-    </div>
-    <div class="dropdown" id="monthDropdown">
-      <div class="dropdown-toggle">月份</div>
+    <div class="dropdown" id="yearDropdown"><div class="dropdown-toggle">年份</div><div class="dropdown-menu"></div></div>
+    <div class="dropdown" id="monthDropdown"><div class="dropdown-toggle">月份</div>
       <div class="dropdown-menu">
-        <div data-value="1">1 月</div><div data-value="2">2 月</div><div data-value="3">3 月</div>
-        <div data-value="4">4 月</div><div data-value="5">5 月</div><div data-value="6">6 月</div>
-        <div data-value="7">7 月</div><div data-value="8">8 月</div><div data-value="9">9 月</div>
-        <div data-value="10">10 月</div><div data-value="11">11 月</div><div data-value="12">12 月</div>
+        <div data-value="1">1 月</div><div data-value="2">2 月</div><div data-value="3">3 月</div><div data-value="4">4 月</div>
+        <div data-value="5">5 月</div><div data-value="6">6 月</div><div data-value="7">7 月</div><div data-value="8">8 月</div>
+        <div data-value="9">9 月</div><div data-value="10">10 月</div><div data-value="11">11 月</div><div data-value="12">12 月</div>
       </div>
     </div>
     <button id="nextMonth">〉</button>
@@ -860,7 +834,6 @@
 
   <div id="month-title"></div>
   <div id="loading">載入中...</div>
-  
   <div id="calendar"></div>
 
   <div id="multiSelectControls" style="text-align:center; margin-top:12px; display:none;">
@@ -876,27 +849,30 @@
            <svg viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg" fill="#555" width="20" height="20"><path d="M15.8,0C17.6,0,19,1.4,19,3.2c0,1.8-1.4,3.2-3.2,3.2c-0.9,0-1.8-0.4-2.4-1.1L7.2,8.8C7.3,9.2,7.4,9.6,7.4,10c0,0.5-0.1,1-0.4,1.5l6,3.7c0.5-1,1.6-1.7,2.8-1.7c1.8,0,3.2,1.4,3.2,3.2c0,1.8-1.4,3.2-3.2,3.2S12.6,18.6,12.6,16.8l0-0.1l-6.5-4c-0.5,0.4-1.2,0.6-1.9,0.6c-1.8,0-3.2-1.4-3.2-3.2s1.4-3.2,3.2-3.2c0.9,0,1.6,0.3,2.2,0.9l6.4-3.5c-0.1-0.3-0.1-0.6-0.1-0.9c0-1.8,1.4-3.2,3.2-3.2z"/></svg>
         </button>
       </div>
-
       <div id="modal-list"></div>
-
+      
       <div class="add-section">
         <hr style="margin: 15px 0; border:0; border-top:1px solid #eee;">
         
-        <select id="new-dept"></select>
+        <div id="dept-bubbles" class="chip-group"></div>
 
-        <div id="tag-container" class="tag-container">
-           <div class="tag-chip" onclick="selectTag(this, '活動')">活動</div>
-           <div class="tag-chip" onclick="selectTag(this, '出差')">出差</div>
-           <div class="tag-chip" onclick="selectTag(this, '會議')">會議</div>
+        <div id="tag-container" class="chip-group">
+           <div class="chip" onclick="selectTag(this, '活動')">活動</div>
+           <div class="chip" onclick="selectTag(this, '出差')">出差</div>
+           <div class="chip" onclick="selectTag(this, '會議')">會議</div>
         </div>
 
         <div class="time-row">
-           <label style="cursor:pointer; display:flex; align-items:center;">
+           <label class="switch">
              <input type="checkbox" id="is-all-day" checked onchange="toggleTimeInputs()"> 
-             <span style="margin-left:4px;">整天</span>
+             <span class="slider"></span>
            </label>
-           <div id="time-inputs" class="time-inputs hidden">
-             <input type="time" id="start-time"> ~ <input type="time" id="end-time">
+           <span style="font-size:0.9rem; margin-left:8px; flex:1;">整天</span>
+           
+           <div id="time-inputs" class="time-inputs hidden" style="display:flex; gap:5px;">
+             <input type="time" id="start-time" style="width:auto; margin:0;"> 
+             <span style="align-self:center;">~</span>
+             <input type="time" id="end-time" style="width:auto; margin:0;">
            </div>
         </div>
 
@@ -920,6 +896,5 @@
       </div>
     </div>
   </div>
-
 </body>
 </html>
