@@ -16,13 +16,13 @@
       --border-color: #ddd;
       --shadow: 0 4px 12px rgba(0,0,0,0.1);
       
-      /* 部門顏色定義 */
-      --color-ALL: #333333;  /* 黑 */
+      /* 🔥 部門顏色定義 (依您的要求) */
+      --color-ALL: #000000;  /* 黑 */
       --color-SG2: #007bff;  /* 藍 */
       --color-SG3: #28a745;  /* 綠 */
       --color-SG4: #6f42c1;  /* 紫 */
       --color-SG5: #fd7e14;  /* 橘 */
-      --color-KEN: #e83e8c;  /* Pink */
+      --color-KEN: #e83e8c;  /* Pink (KEN) */
       --color-HOLIDAY: #dc3545; /* 紅 (假日) */
     }
     body {
@@ -65,13 +65,13 @@
     .dropdown-menu div { padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #eee; white-space: nowrap; }
     .dropdown-menu div:hover { background: #f8f9fa; }
 
-    /* === 下拉選單文字顏色 === */
-    .dept-text-ALL { color: var(--color-ALL); font-weight: 600; }
-    .dept-text-SG2 { color: var(--color-SG2); font-weight: 600; }
-    .dept-text-SG3 { color: var(--color-SG3); font-weight: 600; }
-    .dept-text-SG4 { color: var(--color-SG4); font-weight: 600; }
-    .dept-text-SG5 { color: var(--color-SG5); font-weight: 600; }
-    .dept-text-KEN { color: var(--color-KEN); font-weight: 600; }
+    /* 下拉選單文字顏色 */
+    .dept-text-ALL { color: var(--color-ALL); font-weight: 700; }
+    .dept-text-SG2 { color: var(--color-SG2); font-weight: 700; }
+    .dept-text-SG3 { color: var(--color-SG3); font-weight: 700; }
+    .dept-text-SG4 { color: var(--color-SG4); font-weight: 700; }
+    .dept-text-SG5 { color: var(--color-SG5); font-weight: 700; }
+    .dept-text-KEN { color: var(--color-KEN); font-weight: 700; }
 
     /* === 滑動開關 === */
     .switch { position: relative; display: inline-block; width: 40px; height: 22px; vertical-align: middle; }
@@ -101,7 +101,7 @@
     .lunar { font-size: 0.7rem; color: #888; margin-top: 2px; }
     .lunar.holiday { color: var(--color-HOLIDAY); font-weight: bold; }
 
-    /* === 事件點點 (使用新顏色變數) === */
+    /* === 事件點點 === */
     .event-dots { display: flex; gap: 3px; margin-top: 4px; flex-wrap: wrap; justify-content: center; }
     .dot { width: 6px; height: 6px; border-radius: 50%; }
     .dot.ALL { background: var(--color-ALL); }
@@ -130,10 +130,8 @@
       padding: 10px 0; border-bottom: 1px solid #f0f0f0; font-size: 0.95rem;
     }
     .event-item:last-child { border-bottom: none; }
-    /* 修正：讓內容垂直置中，避免 Badge 跑版 */
     .event-item-content { flex: 1; margin-right: 8px; word-break: break-all; line-height: 1.6; display: flex; align-items: center; flex-wrap: wrap; }
     
-    /* 新增區塊 */
     .add-section { margin-top: 15px; border-top: 1px solid #ddd; padding-top: 15px; display: none; }
     .add-btn-container { text-align: center; margin-top: 15px; border-top: 1px solid #f0f0f0; padding-top: 10px; }
     .add-btn-container button { width: 100%; padding: 8px; font-weight: bold; background: #f8f9fa; }
@@ -151,22 +149,22 @@
     }
     .chip:hover { background: #eee; }
     .chip.active { background: var(--primary); color: white; border-color: var(--primary); box-shadow: 0 2px 5px rgba(0,123,255,0.3); }
+    /* 假日泡泡選取時變紅 */
     .chip.holiday-chip.active { background: var(--color-HOLIDAY); border-color: var(--color-HOLIDAY); box-shadow: 0 2px 5px rgba(220,53,69,0.3); }
 
     /* === 列表中的徽章 (Badges) === */
-    /* 通用 Badge 樣式 */
     .badge {
       display: inline-flex; align-items: center; justify-content: center;
       padding: 2px 8px; border-radius: 12px;
       font-size: 0.75em; margin-right: 5px; 
       font-weight: normal; vertical-align: middle; white-space: nowrap;
-      height: 20px; box-sizing: border-box;
+      height: 22px; box-sizing: border-box;
     }
 
-    /* 1. 時間泡泡 (最前面) */
+    /* 1. 時間 */
     .time-badge { background: #e9ecef; color: #495057; font-family: monospace; }
 
-    /* 2. 部門泡泡 */
+    /* 2. 部門 */
     .dept-badge { color: #fff; }
     .dept-badge.ALL { background-color: var(--color-ALL); }
     .dept-badge.SG2 { background-color: var(--color-SG2); }
@@ -175,10 +173,12 @@
     .dept-badge.SG5 { background-color: var(--color-SG5); }
     .dept-badge.KEN { background-color: var(--color-KEN); }
 
-    /* 3. 假日泡泡 */
+    /* 3. 假日 (紅底白字) */
     .holiday-badge { background-color: var(--color-HOLIDAY); color: white; }
+    /* 🔥 假日文字顏色 */
+    .holiday-text { color: var(--color-HOLIDAY); font-weight: bold; }
 
-    /* 4. 類別泡泡 */
+    /* 4. 類別 */
     .tag-badge { background: #e3f2fd; color: #0d6efd; border: 1px solid #b6d4fe; }
 
     /* === 時間選擇列 === */
@@ -327,15 +327,13 @@
       const ymd = currentDate.replaceAll("-","");
       const holiday = getHoliday(ymd);
       
-      // 🔥 假日渲染：改用紅色泡泡
+      // 🔥 假日渲染
       if (holiday) {
         const div = document.createElement("div"); div.className = "event-item";
-        
-        // 內容容器
         const contentSpan = document.createElement("span");
         contentSpan.className = "event-item-content";
-        contentSpan.innerHTML = `<span class="badge holiday-badge">假日</span>${holiday.description}`;
-        
+        // 🔥 使用泡泡與紅色文字
+        contentSpan.innerHTML = `<span class="badge holiday-badge">假日</span><span class="holiday-text">${holiday.description}</span>`;
         div.appendChild(contentSpan);
 
         if (userDept === "KEN") {
@@ -343,17 +341,12 @@
           contentSpan.title = "點擊編輯";
           contentSpan.onclick = () => {
              const input = document.createElement("input"); input.value = holiday.description; input.style.width="70%";
-             contentSpan.innerHTML = ""; // 清空
-             contentSpan.appendChild(input); input.focus();
-             
+             contentSpan.innerHTML = ""; contentSpan.appendChild(input); input.focus();
              const save = async () => {
                 if(input.value && input.value!==holiday.description) {
                    await supabase.from("holidays").update({description:input.value}).eq("date",currentDate);
                    await refreshModal();
-                } else {
-                   // 還原
-                   contentSpan.innerHTML = `<span class="badge holiday-badge">假日</span>${holiday.description}`;
-                }
+                } else contentSpan.innerHTML = `<span class="badge holiday-badge">假日</span><span class="holiday-text">${holiday.description}</span>`;
              };
              input.onblur=save; input.onkeydown=e=>{if(e.key==="Enter")save()};
           };
@@ -361,7 +354,8 @@
           const btn = document.createElement("button"); 
           btn.textContent = "刪除";
           btn.style.marginLeft = "8px";
-          btn.onclick = () => window.deleteHoliday(currentDate);
+          // 🔥 確保刪除事件正確綁定
+          btn.onclick = (e) => { e.stopPropagation(); window.deleteHoliday(currentDate); };
           div.appendChild(btn);
         }
         list.appendChild(div);
@@ -374,15 +368,9 @@
         events.forEach(ev => {
           const div = document.createElement("div"); div.className = "event-item";
           
-          // 1. 時間徽章 (第一位)
-          let timeHtml = (!ev.isAllDay && ev.startTime) 
-            ? `<span class="badge time-badge">${ev.startTime.slice(0,5)}${ev.endTime?'~'+ev.endTime.slice(0,5):''}</span>` 
-            : "";
-          
-          // 2. 部門徽章 (第二位)
+          let timeHtml = (!ev.isAllDay && ev.startTime) ? `<span class="badge time-badge">${ev.startTime.slice(0,5)}${ev.endTime?'~'+ev.endTime.slice(0,5):''}</span>` : "";
           let deptHtml = `<span class="badge dept-badge ${ev.dept}">${ev.dept}</span>`;
 
-          // 3. 類別徽章 (第三位) + 內容
           let dispDesc = ev.description;
           let tagHtml = "";
           const tags = ["活動", "出差", "會議"];
@@ -395,7 +383,7 @@
           }
 
           const span = document.createElement("span"); 
-          span.className = `event-item-content dept-text-${ev.dept}`; // 加入文字顏色class
+          span.className = `event-item-content dept-text-${ev.dept}`; // 使用 dept-text-XX class
           span.innerHTML = `${timeHtml}${deptHtml}${tagHtml}${dispDesc}`;
 
           if (canOperateDept(ev.dept)) {
@@ -412,7 +400,7 @@
               input.onblur=save; input.onkeydown=e=>{if(e.key==="Enter")save()};
             };
             const btn = document.createElement("button"); btn.textContent="刪除"; btn.style.marginLeft="8px";
-            btn.onclick = () => deleteEvent(ev.id);
+            btn.onclick = (e) => { e.stopPropagation(); deleteEvent(ev.id); };
             div.appendChild(span); div.appendChild(btn);
           } else div.appendChild(span);
           list.appendChild(div);
@@ -512,6 +500,7 @@
       await refreshModal();
     }
     
+    // 🔥 全域假日刪除
     window.deleteHoliday = async function(dateStr) {
       if(userDept !== "KEN") { alert("只有 KEN 可以刪除假日"); return; }
       if(!confirm("確定刪除假日?")) return;
@@ -747,7 +736,6 @@
       if (userDept === "KEN") opts.push("KEN", "HOLIDAY");
       if (["SG2", "SG3", "SG4", "SG5"].includes(userDept)) opts = [userDept];
 
-      // 🔥 修正：單一部門自動隱藏泡泡
       if (opts.length === 1 && userDept !== "ALL" && userDept !== "KEN") {
          container.style.display = "none";
          selectedDeptBubble = opts[0];
