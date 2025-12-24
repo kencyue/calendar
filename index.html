@@ -7,7 +7,7 @@
   <script src="https://cdn.jsdelivr.net/npm/lunar-javascript@1.6.6/lunar.min.js"></script>
   
   <style>
-    /* === 基礎變數與顏色設定 === */
+    /* === 基礎變數 === */
     :root {
       --primary: #007bff;
       --bg-color: #f4f6f9;
@@ -16,14 +16,14 @@
       --border-color: #ddd;
       --shadow: 0 4px 12px rgba(0,0,0,0.1);
       
-      /* 🔥 部門專屬色 (依您的要求調整) */
-      --color-ALL: #000000;  /* 黑色 */
-      --color-SG2: #007bff;  /* 藍色 */
-      --color-SG3: #28a745;  /* 綠色 */
-      --color-SG4: #6f42c1;  /* 紫色 */
-      --color-SG5: #fd7e14;  /* 橘色 */
-      --color-KEN: #e83e8c;  /* PINK */
-      --color-HOLIDAY: #dc3545; /* 紅色 */
+      /* 部門顏色 */
+      --color-ALL: #000000;
+      --color-SG2: #007bff;
+      --color-SG3: #28a745;
+      --color-SG4: #6f42c1;
+      --color-SG5: #fd7e14;
+      --color-KEN: #e83e8c;
+      --color-HOLIDAY: #dc3545;
     }
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -65,7 +65,6 @@
     .dropdown-menu div { padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #eee; white-space: nowrap; }
     .dropdown-menu div:hover { background: #f8f9fa; }
 
-    /* 下拉選單文字顏色 */
     .dept-text-ALL { color: var(--color-ALL); font-weight: 700; }
     .dept-text-SG2 { color: var(--color-SG2); font-weight: 700; }
     .dept-text-SG3 { color: var(--color-SG3); font-weight: 700; }
@@ -140,7 +139,6 @@
       border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 0.95rem;
     }
 
-    /* === 泡泡標籤 (Chips) === */
     .chip-group { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
     .chip {
       padding: 4px 10px; border: 1px solid #ddd; border-radius: 16px;
@@ -151,7 +149,7 @@
     .chip.active { background: var(--primary); color: white; border-color: var(--primary); box-shadow: 0 2px 5px rgba(0,123,255,0.3); }
     .chip.holiday-chip.active { background: var(--color-HOLIDAY); border-color: var(--color-HOLIDAY); box-shadow: 0 2px 5px rgba(220,53,69,0.3); }
 
-    /* === 列表中的徽章 (Badges) === */
+    /* === 徽章 === */
     .badge {
       display: inline-flex; align-items: center; justify-content: center;
       padding: 2px 8px; border-radius: 12px;
@@ -159,11 +157,8 @@
       font-weight: normal; vertical-align: middle; white-space: nowrap;
       height: 22px; box-sizing: border-box;
     }
-
-    /* 時間 (顯示在第一位) */
     .time-badge { background: #e9ecef; color: #495057; font-family: monospace; }
-
-    /* 部門泡泡 */
+    
     .dept-badge { color: #fff; }
     .dept-badge.ALL { background-color: var(--color-ALL); }
     .dept-badge.SG2 { background-color: var(--color-SG2); }
@@ -172,20 +167,14 @@
     .dept-badge.SG5 { background-color: var(--color-SG5); }
     .dept-badge.KEN { background-color: var(--color-KEN); }
 
-    /* 假日泡泡 */
     .holiday-badge { background-color: var(--color-HOLIDAY); color: white; }
-    /* 🔥 假日文字顏色 */
     .holiday-text { color: var(--color-HOLIDAY); font-weight: bold; }
-
-    /* 類別泡泡 */
     .tag-badge { background: #e3f2fd; color: #0d6efd; border: 1px solid #b6d4fe; }
 
-    /* === 時間選擇列 === */
     .time-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
     .time-row label { display: flex; align-items: center; font-size: 0.9rem; cursor: pointer; }
     .hidden { display: none !important; }
 
-    /* === 其他 === */
     #loading { display: none; text-align: center; padding: 10px; color: #666; }
     .icon-btn { background: none; border: none; padding: 6px; cursor: pointer; border-radius: 50%; transition: background 0.2s; }
     .icon-btn:hover { background: #f0f0f0; }
@@ -197,7 +186,7 @@
     import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
     
     const supabaseUrl = "https://uiewxojtldhebydjmczh.supabase.co";
-    // 你的 Key
+    // 🔥 你的 Key
     const supabaseKey = "sb_publishable_XEf_IKh9aiU7if2jrNHbmQ_Fvrqvjhd";
     
     const supabase = createClient(supabaseUrl, supabaseKey);
@@ -239,11 +228,10 @@
     async function fetchMonthData(year,month){
       const {start,end} = ymdRange(year,month);
       
-      // 🔥 修改：select("*") 確保抓到 id
       const hq = await supabase.from("holidays").select("*").gte("date",start).lt("date",end).order("date");
-      // 🔥 修正：正確映射 id
+      // 🔥 確保抓到 ID
       holidayList = (hq.data||[]).map(r=>({ 
-        id: r.id, // 這裡一定要有 id
+        id: r.id, 
         date: ymdToCompact(r.date), 
         description: r.description, 
         isHoliday: r.is_holiday 
@@ -334,7 +322,7 @@
       const ymd = currentDate.replaceAll("-","");
       const holiday = getHoliday(ymd);
       
-      // 🔥 假日渲染
+      // 🔥 假日渲染邏輯
       if (holiday) {
         const div = document.createElement("div"); div.className = "event-item";
         
@@ -343,40 +331,50 @@
         contentSpan.innerHTML = `<span class="badge holiday-badge">假日</span><span class="holiday-text">${holiday.description}</span>`;
         div.appendChild(contentSpan);
 
-        // 🔥 權限控制
         if (userDept === "KEN") {
           contentSpan.style.cursor="pointer";
           contentSpan.title = "點擊編輯";
+          
+          // 🔥 編輯假日 (直接綁定)
           contentSpan.onclick = () => {
-             const input = document.createElement("input"); input.value = holiday.description; input.style.width="70%";
-             contentSpan.innerHTML = ""; contentSpan.appendChild(input); input.focus();
+             const input = document.createElement("input"); 
+             input.value = holiday.description; 
+             input.style.width="70%";
+             contentSpan.innerHTML = ""; 
+             contentSpan.appendChild(input); 
+             input.focus();
              
              let isSaving = false;
              const save = async () => {
-                if(isSaving) return; isSaving = true;
+                if(isSaving) return; 
+                isSaving = true;
                 const val = input.value.trim();
-                if(val && val!==holiday.description) {
-                   // 🔥 修改：改用 ID 更新，更穩
-                   await supabase.from("holidays").update({description:val}).eq("id",holiday.id);
+                if(val && val !== holiday.description) {
+                   // 使用 ID 更新
+                   await supabase.from("holidays").update({description:val}).eq("id", holiday.id);
                    await refreshModal();
                 } else {
                    contentSpan.innerHTML = `<span class="badge holiday-badge">假日</span><span class="holiday-text">${holiday.description}</span>`;
                 }
              };
-             input.onblur=save; input.onkeydown=e=>{if(e.key==="Enter")save()};
+             input.onblur = save; 
+             input.onkeydown = e => { if(e.key==="Enter") save(); };
           };
 
           const btn = document.createElement("button"); 
           btn.textContent = "刪除";
           btn.style.marginLeft = "8px";
-          // 🔥 修正：使用 addEventListener 避免 window scope 問題，並使用 ID 刪除
-          btn.addEventListener("click", async (e) => { 
-             e.stopPropagation(); 
+          
+          // 🔥 刪除假日 (直接綁定 addEventListener，不依賴 window)
+          btn.addEventListener("click", async (e) => {
+             console.log("嘗試刪除假日 ID:", holiday.id); // 除錯用
+             e.stopPropagation();
              if(!confirm("確定要刪除這個假日嗎？")) return;
              const { error } = await supabase.from("holidays").delete().eq("id", holiday.id);
-             if(error) alert("刪除失敗:" + error.message);
+             if(error) alert("刪除失敗: " + error.message);
              else await refreshModal();
           });
+          
           div.appendChild(btn);
         }
         list.appendChild(div);
@@ -389,9 +387,9 @@
         events.forEach(ev => {
           const div = document.createElement("div"); div.className = "event-item";
           
-          // 1. 時間
+          // 時間泡泡
           let timeHtml = (!ev.isAllDay && ev.startTime) ? `<span class="badge time-badge">${ev.startTime.slice(0,5)}${ev.endTime?'~'+ev.endTime.slice(0,5):''}</span>` : "";
-          // 2. 部門
+          // 部門泡泡
           let deptHtml = `<span class="badge dept-badge ${ev.dept}">${ev.dept}</span>`;
 
           let dispDesc = ev.description;
@@ -407,27 +405,49 @@
 
           const span = document.createElement("span"); 
           span.className = `event-item-content dept-text-${ev.dept}`;
-          span.innerHTML = `${timeHtml}${deptHtml}${tagHtml}${dispDesc}`; // 排序：時間 > 部門 > 類別 > 內容
+          span.innerHTML = `${timeHtml}${deptHtml}${tagHtml}${dispDesc}`; // 順序：時間 > 部門 > 類別 > 內容
 
           if (canOperateDept(ev.dept)) {
             span.style.cursor = "pointer";
+            
+            // 🔥 編輯事件 (直接綁定)
             span.onclick = () => {
-              const input = document.createElement("input"); input.value = ev.description; input.style.width = "80%";
-              span.innerHTML=""; span.appendChild(input); input.focus();
+              const input = document.createElement("input"); 
+              input.value = ev.description; 
+              input.style.width = "80%";
+              span.innerHTML=""; 
+              span.appendChild(input); 
+              input.focus();
               
               let isSaving = false;
               const save = async () => {
-                 if(isSaving) return; isSaving = true;
+                 if(isSaving) return; 
+                 isSaving = true;
                  const val = input.value.trim();
-                 if(val && val!==ev.description) {
-                    await supabase.from("events").update({description:val}).eq("id",ev.id);
+                 if(val && val !== ev.description) {
+                    await supabase.from("events").update({description:val}).eq("id", ev.id);
                     await refreshModal();
-                 } else span.innerHTML = `${timeHtml}${deptHtml}${tagHtml}${dispDesc}`;
+                 } else {
+                    span.innerHTML = `${timeHtml}${deptHtml}${tagHtml}${dispDesc}`;
+                 }
               };
-              input.onblur=save; input.onkeydown=e=>{if(e.key==="Enter")save()};
+              input.onblur = save; 
+              input.onkeydown = e => { if(e.key==="Enter") save(); };
             };
-            const btn = document.createElement("button"); btn.textContent="刪除"; btn.style.marginLeft="8px";
-            btn.onclick = (e) => { e.stopPropagation(); deleteEvent(ev.id); };
+
+            const btn = document.createElement("button"); 
+            btn.textContent = "刪除"; 
+            btn.style.marginLeft = "8px";
+            
+            // 🔥 刪除事件 (直接綁定)
+            btn.addEventListener("click", async (e) => {
+                e.stopPropagation();
+                if(!confirm("確定刪除?")) return;
+                const { error } = await supabase.from("events").delete().eq("id", ev.id);
+                if(error) alert("失敗:" + error.message);
+                else await refreshModal();
+            });
+            
             div.appendChild(span); div.appendChild(btn);
           } else div.appendChild(span);
           list.appendChild(div);
@@ -520,12 +540,6 @@
       }
     }
     window.addEvent = addEvent;
-
-    window.deleteEvent = async function(id){
-      if(!confirm("確定刪除?")) return;
-      await supabase.from("events").delete().eq("id",id);
-      await refreshModal();
-    }
 
     async function updateCalendar(showLoading = true) {
       if(showLoading) document.getElementById("loading").style.display = "block";
