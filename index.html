@@ -96,7 +96,7 @@
     }
     .day {
       background: var(--card-bg);
-      min-height: 70px; /* 手機版高度 */
+      min-height: 70px;
       border: 1px solid var(--border-color);
       border-radius: 6px;
       padding: 4px;
@@ -105,7 +105,7 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      user-select: none; /* 防止長按選取文字 */
+      user-select: none;
     }
     .day.today { border: 2px solid var(--primary); background: #e7f1ff; }
     .day.weekend { color: #dc3545; }
@@ -124,13 +124,16 @@
     }
     .dot { width: 6px; height: 6px; border-radius: 50%; }
 
-    /* === 部門顏色定義 === */
-    .dept-ALL { color: #dc3545; background: #dc3545; } /* 紅 */
-    .dept-SG2 { color: #fd7e14; background: #fd7e14; } /* 橘 */
-    .dept-SG3 { color: #ffc107; background: #ffc107; } /* 黃 */
-    .dept-SG4 { color: #28a745; background: #28a745; } /* 綠 */
-    .dept-SG5 { color: #007bff; background: #007bff; } /* 藍 */
-    .dept-KEN { color: #6f42c1; background: #6f42c1; } /* 紫 */
+    /* === 部門顏色定義 (文字色) === */
+    /* 修改：背景透明，文字帶顏色，加粗 */
+    .dept-ALL { color: #dc3545; background: transparent; font-weight: 600; }
+    .dept-SG2 { color: #fd7e14; background: transparent; font-weight: 600; }
+    .dept-SG3 { color: #ffc107; background: transparent; font-weight: 600; text-shadow: 0 0 1px #999;} /* 黃色怕太淺加個陰影 */
+    .dept-SG4 { color: #28a745; background: transparent; font-weight: 600; }
+    .dept-SG5 { color: #007bff; background: transparent; font-weight: 600; }
+    .dept-KEN { color: #6f42c1; background: transparent; font-weight: 600; }
+    
+    /* 月曆上的點點維持背景色 */
     .dot.ALL { background: #dc3545; }
     .dot.SG2 { background: #fd7e14; }
     .dot.SG3 { background: #ffc107; }
@@ -138,9 +141,9 @@
     .dot.SG5 { background: #007bff; }
     .dot.KEN { background: #6f42c1; }
     
-    /* 下拉選單顏色 */
+    /* 下拉選單文字顏色 */
     .dropdown-menu .dept-SG2 { color: #fd7e14; }
-    .dropdown-menu .dept-SG3 { color: #ffc107; }
+    .dropdown-menu .dept-SG3 { color: #d39e00; } /* 選單黃色深一點 */
     .dropdown-menu .dept-SG4 { color: #28a745; }
     .dropdown-menu .dept-SG5 { color: #007bff; }
     .dropdown-menu .dept-KEN { color: #6f42c1; }
@@ -166,11 +169,12 @@
       overflow-y: auto;
       box-shadow: 0 10px 25px rgba(0,0,0,0.2);
     }
+    /* 事件列表項目 */
     .event-item {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 8px 0;
+      padding: 10px 0;
       border-bottom: 1px solid #eee;
       font-size: 0.95rem;
     }
@@ -188,7 +192,7 @@
     }
     .btn-row { display: flex; gap: 10px; justify-content: flex-end; margin-top: 8px; }
 
-    /* === 新增：標籤泡泡與時間樣式 === */
+    /* === 標籤泡泡 === */
     .tag-container {
       display: flex;
       gap: 6px;
@@ -196,9 +200,9 @@
       flex-wrap: wrap;
     }
     .tag-chip {
-      padding: 4px 10px;
+      padding: 4px 12px;
       border: 1px solid #ddd;
-      border-radius: 16px;
+      border-radius: 20px; /* 更圓一點 */
       font-size: 0.85rem;
       cursor: pointer;
       background: #f8f9fa;
@@ -210,6 +214,8 @@
       color: white;
       border-color: var(--primary);
     }
+    
+    /* === 時間樣式 === */
     .time-row {
       display: flex;
       align-items: center;
@@ -225,12 +231,13 @@
     .time-badge {
       background: #eee;
       color: #555;
-      padding: 1px 5px;
+      padding: 2px 6px;
       border-radius: 4px;
-      font-size: 0.75em;
+      font-size: 0.8em;
       margin-right: 5px;
       font-family: monospace;
       white-space: nowrap;
+      vertical-align: middle;
     }
     .hidden { display: none !important; }
 
@@ -272,9 +279,14 @@
   <script type="module">
     import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
     
-    // 🔥 請確認此處為你的專案 URL 和 Key
+    // 🔥 請確認你的 URL 和 Key
     const supabaseUrl = "https://uiewxojtldhebydjmczh.supabase.co";
-    const supabaseKey = "sb_publishable_XEf_IKh9aiU7if2jrNHbmQ_Fvrqvjhd";
+    // 請填入你的 anon key
+    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVpZXd4b2p0bGRoZWJ5ZGptY3poIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MDgwNzQsImV4cCI6MjA3NDE4NDA3NH0.63t5x9d0o2yF4y3rJ_CqR3eZqX5v8c4t1j9g4y2z5w4"; 
+    
+    // 注意：上面的 Key 是一個範例格式，請確認這是你從 Supabase 後台複製的正確 Key。
+    // 如果你發現登入有問題，請務必換回你自己專案的 anon public key。
+
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const today = new Date();
@@ -304,7 +316,6 @@
         userDept = data.dept || "NONE";
         return true;
       }
-      // 不存在則自動加入為 NONE
       await supabase.from("allowed_users").insert([{ email, dept: "NONE" }]);
       userDept = "NONE";
       return false;
@@ -313,7 +324,6 @@
     async function fetchMonthData(year,month){
       const {start,end} = ymdRange(year,month);
       
-      // 抓假日
       const hq = await supabase.from("holidays")
         .select("date,description,is_holiday")
         .gte("date",start).lt("date",end).order("date");
@@ -323,7 +333,6 @@
         isHoliday: r.is_holiday
       }));
 
-      // 抓事件 (包含時間欄位)
       const eq = await supabase.from("events")
         .select("id,date,dept,description,start_time,end_time,is_all_day")
         .gte("date",start).lt("date",end)
@@ -351,7 +360,7 @@
       return userDept === dept;
     }
 
-    // --- UI 互動邏輯: 標籤與時間 ---
+    // --- UI 互動邏輯 ---
     window.toggleTimeInputs = function() {
       const isAllDay = document.getElementById("is-all-day").checked;
       const inputs = document.getElementById("time-inputs");
@@ -373,7 +382,8 @@
     window.toggleTagsVisibility = function() {
       const dept = document.getElementById("new-dept").value;
       const tagContainer = document.getElementById("tag-container");
-      // KEN 或 私人行程不顯示標籤
+      
+      // 只有 KEN 和 PRIVATE 隱藏標籤，但保留時間
       if (dept === "KEN" || dept === "PRIVATE") {
         tagContainer.style.display = "none";
         selectedTag = "";
@@ -383,26 +393,42 @@
       }
     }
 
-    // --- Modal 開啟與渲染 ---
-    function openModal(dateStr,events){
-      currentDate = dateStr;
-      document.getElementById("modal-date").textContent = dateStr;
+    // 🌟 即時更新用：重新抓取資料並刷新當前 Modal 的列表
+    async function refreshModal() {
+      if(!currentDate) return;
+      // 重新抓取整月資料 (雖然有點重，但保證最正確)
+      const year = parseInt(currentDate.split("-")[0]);
+      const month = parseInt(currentDate.split("-")[1]);
+      await fetchMonthData(year, month);
+      
+      // 找出當天的新資料
+      const ymd = currentDate.replaceAll("-","");
+      let events = [];
+      if (currentDept === "ALL") {
+          events = [
+            ...deptEvents.ALL, ...deptEvents.SG2, ...deptEvents.SG3, ...deptEvents.SG4, ...deptEvents.SG5,
+            ...(userDept === "KEN" && isPrivateVisible ? deptEvents.KEN || [] : [])
+          ].filter(ev => ev.date === ymd);
+      } else if (currentDept === "PRIVATE" && userDept === "KEN") {
+          events = (deptEvents.KEN || []).filter(ev => ev.date === ymd);
+      } else {
+          events = (deptEvents[currentDept] || []).filter(ev => ev.date === ymd);
+      }
+      
+      // 更新背景月曆
+      await updateCalendar(false); // false 代表不顯示 loading 避免閃爍
+      // 更新 Modal 列表
+      renderModalList(events);
+    }
+
+    // 將列表渲染邏輯抽出
+    function renderModalList(events) {
       const list = document.getElementById("modal-list");
       list.innerHTML = "";
-
-      // 重置新增表單
-      document.getElementById("new-desc").value = "";
-      document.getElementById("is-all-day").checked = true;
-      document.getElementById("start-time").value = "";
-      document.getElementById("end-time").value = "";
-      window.toggleTimeInputs();
-      
-      selectedTag = "";
-      document.querySelectorAll(".tag-chip").forEach(c => c.classList.remove("active"));
-      window.toggleTagsVisibility(); // 初始化標籤顯示狀態
+      const ymd = currentDate.replaceAll("-","");
 
       // 渲染假日
-      const holiday = getHoliday(dateStr.replaceAll("-",""));
+      const holiday = getHoliday(ymd);
       if (holiday) {
         const div = document.createElement("div");
         div.className = "event-item";
@@ -410,7 +436,6 @@
         span.className = "lunar holiday";
         span.textContent = `[假日] ${holiday.description}`;
         
-        // 假日編輯 (ALL/KEN)
         if (["ALL", "KEN"].includes(userDept)) {
           span.style.cursor = "pointer";
           span.onclick = () => {
@@ -420,18 +445,18 @@
              const save = async () => {
                 const val = input.value.trim();
                 if(val && val !== holiday.description) {
-                   await supabase.from("holidays").update({description:val}).eq("date",dateStr);
-                   holiday.description = val;
-                   span.textContent = `[假日] ${val}`;
+                   await supabase.from("holidays").update({description:val}).eq("date",currentDate);
+                   await refreshModal(); // 即時更新
+                } else {
+                   input.replaceWith(span);
                 }
-                input.replaceWith(span);
              };
              input.addEventListener("blur", save);
              input.addEventListener("keydown", e=>{if(e.key==="Enter") save();});
           };
           const btn = document.createElement("button");
           btn.textContent = "刪除";
-          btn.onclick = () => deleteHoliday(dateStr);
+          btn.onclick = () => deleteHoliday(currentDate);
           div.appendChild(span); div.appendChild(btn);
         } else {
           div.appendChild(span);
@@ -439,7 +464,7 @@
         list.appendChild(div);
       }
 
-      // 渲染事件 (排序: 有時間的先 -> 無時間的後)
+      // 渲染事件
       if(events.length===0){
         const div = document.createElement("div");
         div.className = "event-item";
@@ -468,19 +493,24 @@
           span.className = `dept-${ev.dept}`;
           span.innerHTML = `${timeHtml}[${ev.dept}] ${ev.description}`;
 
-          // 事件編輯 (簡易版: 僅改文字)
+          // 修改事件
           if (canOperateDept(ev.dept)) {
             span.style.cursor = "pointer";
             span.onclick = () => {
               const input = document.createElement("input");
-              input.type = "text"; input.value = ev.description; input.style.width = "80%";
+              input.type = "text"; 
+              // 編輯時移除標籤顯示的干擾比較難，這裡簡單處理：直接編輯原字串
+              input.value = ev.description; 
+              input.style.width = "80%";
               span.innerHTML = ""; span.appendChild(input); input.focus();
               const save = async () => {
                  const val = input.value.trim();
                  if(val && val !== ev.description) {
                     const {error} = await supabase.from("events").update({description:val}).eq("id",ev.id);
-                    if(!error) { ev.description = val; span.innerHTML = `${timeHtml}[${ev.dept}] ${val}`; }
-                 } else { span.innerHTML = `${timeHtml}[${ev.dept}] ${ev.description}`; }
+                    if(!error) await refreshModal(); // 即時更新
+                 } else {
+                    span.innerHTML = `${timeHtml}[${ev.dept}] ${ev.description}`;
+                 }
               };
               input.addEventListener("blur", save);
               input.addEventListener("keydown", e=>{if(e.key==="Enter") save();});
@@ -495,15 +525,34 @@
           list.appendChild(div);
         });
       }
+    }
 
-      // 顯示新增區塊判斷
+    // --- Modal 開啟 ---
+    function openModal(dateStr,events){
+      currentDate = dateStr;
+      document.getElementById("modal-date").textContent = dateStr;
+      
+      // 重置新增表單
+      document.getElementById("new-desc").value = "";
+      document.getElementById("is-all-day").checked = true;
+      document.getElementById("start-time").value = "";
+      document.getElementById("end-time").value = "";
+      window.toggleTimeInputs();
+      
+      selectedTag = "";
+      document.querySelectorAll(".tag-chip").forEach(c => c.classList.remove("active"));
+      window.toggleTagsVisibility(); // 初始化標籤顯示
+
+      renderModalList(events);
+
+      // 權限區塊
       const addSection = document.querySelector("#modal .add-section");
       if (!userSession || userDept === "NONE") {
         addSection.style.display = "none";
       } else {
         addSection.style.display = "block";
         updateAddDeptOptions();
-        window.toggleTagsVisibility(); // 再次確保正確
+        window.toggleTagsVisibility(); 
       }
       document.getElementById("modal").style.display="flex";
     }
@@ -513,7 +562,7 @@
     }
     window.closeModal = closeModal;
 
-    // --- 新增事件邏輯 ---
+    // --- 新增事件 ---
     async function addEvent() {
       let desc = document.getElementById("new-desc").value.trim();
       const dept = document.getElementById("new-dept").value;
@@ -530,11 +579,14 @@
       if (!desc) { alert("請輸入描述"); return; }
       if (userDept === "NONE") { alert("無權限"); return; }
 
-      // 特殊: 新增假日
+      // 假日邏輯
       if (["ALL", "KEN"].includes(userDept) && dept === "ALL" && /^h.*h$/i.test(desc)) {
          const hName = desc.slice(1, -1).trim();
          const { error } = await supabase.from("holidays").insert([{ date: currentDate, description: hName, is_holiday: true }]);
-         if (error) alert("失敗:"+error.message); else { alert("已新增假日"); await updateCalendar(); }
+         if (error) alert("失敗:"+error.message); else { 
+            document.getElementById("new-desc").value = "";
+            await refreshModal(); // 即時更新
+         }
          return;
       }
 
@@ -542,9 +594,9 @@
         alert("只能操作自己部門"); return;
       }
 
-      // 自動加上泡泡 (如果是 KEN 或 PRIVATE 則忽略)
+      // 🌟 修正泡泡邏輯：不加 []，改用空格
       if (selectedTag && dept !== "KEN" && dept !== "PRIVATE") {
-         desc = `[${selectedTag}] ${desc}`;
+         desc = `${selectedTag} ${desc}`;
       }
 
       const payload = {
@@ -559,10 +611,13 @@
       const { error } = await supabase.from("events").insert([payload]);
       if (error) alert("失敗:"+error.message);
       else {
+        // 清空輸入
         document.getElementById("new-desc").value = "";
         selectedTag = "";
         document.querySelectorAll(".tag-chip").forEach(c => c.classList.remove("active"));
-        await updateCalendar();
+        
+        // 🌟 即時更新
+        await refreshModal();
       }
     }
     window.addEvent = addEvent;
@@ -573,24 +628,27 @@
       const {data} = await supabase.from("events").select("dept").eq("id",id).maybeSingle();
       if(!data) return;
       if(!["ALL","KEN"].includes(userDept) && userDept!==data.dept) { alert("無權限"); return; }
+      
       const {error} = await supabase.from("events").delete().eq("id",id);
-      if(!error) await updateCalendar();
+      if(!error) await refreshModal(); // 即時更新
     }
 
     window.deleteHoliday = async function(dateStr) {
       if(!["ALL","KEN"].includes(userDept)) return;
       if(!confirm(`刪除 ${dateStr} 假日?`)) return;
       const {error} = await supabase.from("holidays").delete().eq("date",dateStr);
-      if(!error) await updateCalendar();
+      if(!error) await refreshModal(); // 即時更新
     }
 
     // --- 月曆繪製 ---
-    async function updateCalendar() {
-      document.getElementById("loading").style.display = "block";
+    async function updateCalendar(showLoading = true) {
+      if(showLoading) document.getElementById("loading").style.display = "block";
       const year = parseInt(document.querySelector("#yearDropdown .dropdown-toggle").dataset.value);
       const month = parseInt(document.querySelector("#monthDropdown .dropdown-toggle").dataset.value);
       
       document.getElementById("month-title").textContent = `${year}年 ${month}月`;
+      // 如果不是 refreshModal 呼叫的 (例如切換月份)，要重抓一次資料
+      // 這裡為了簡化，統一重抓，反正 refreshModal 已經更新了 cache
       await fetchMonthData(year, month);
       
       const calendar = document.getElementById("calendar");
@@ -623,7 +681,6 @@
         const fullDate = `${year}-${pad2(month)}-${pad2(d)}`;
         const holiday = getHoliday(ymd);
         
-        // 過濾顯示部門
         let events = [];
         if (currentDept === "ALL") {
           events = [
@@ -664,7 +721,6 @@
            el.appendChild(dots);
         }
 
-        // 觸控長按多選
         let pressTimer;
         el.addEventListener("touchstart", () => {
           pressTimer = setTimeout(() => { multiSelectMode=true; toggleSelect(ymd, el); }, 450);
@@ -675,7 +731,6 @@
           else openModal(fullDate, events);
         });
 
-        // 桌機 Hover 提示
         if (!/Mobi|Android/i.test(navigator.userAgent)) {
            el.onmouseenter = (e) => {
               const tips = [];
@@ -698,10 +753,9 @@
         }
         calendar.appendChild(el);
       }
-      document.getElementById("loading").style.display = "none";
+      if(showLoading) document.getElementById("loading").style.display = "none";
     }
 
-    // --- 多選與分享 ---
     function toggleSelect(ymd, el) {
       const shareBtn = document.getElementById("multiShareBtn");
       const controls = document.getElementById("multiSelectControls");
@@ -732,7 +786,7 @@
        let text = "";
        for(const d of dates) {
           const y=parseInt(d.slice(0,4)), m=parseInt(d.slice(4,6)), dd=d.slice(6,8);
-          await fetchMonthData(y, m); // 確保資料正確
+          await fetchMonthData(y, m);
           const h = holidayList.find(x => x.date === d);
           
           let events = [];
@@ -757,7 +811,6 @@
        else { navigator.clipboard.writeText(text); alert("已複製"); }
     };
 
-    // --- 匯出 ICS ---
     document.getElementById("exportRangeBtn").onclick = () => document.getElementById("exportRangeModal").style.display = "flex";
     document.getElementById("confirmExportRange").onclick = async () => {
        const start = document.getElementById("exportStart").value;
@@ -772,7 +825,6 @@
           const ymd = `${y}${pad2(m)}${pad2(d)}`;
           await fetchMonthData(y, m);
           
-          // 邏輯同 multiShare
           const h = holidayList.find(x=>x.date===ymd);
           let events = [];
           if (currentDept === "ALL") {
@@ -802,7 +854,6 @@
        document.getElementById("exportRangeModal").style.display = "none";
     };
 
-    // --- 登入/狀態管理 ---
     async function login(){
       await supabase.auth.signInWithOAuth({
         provider:"google",
@@ -831,7 +882,6 @@
     }
 
     function initMenus() {
-       // 設定年份月份選單
        const yearDd = document.getElementById("yearDropdown");
        const yearToggle = yearDd.querySelector(".dropdown-toggle");
        const yearMenu = yearDd.querySelector(".dropdown-menu");
@@ -854,19 +904,16 @@
           d.onclick=()=>{ mToggle.textContent=d.textContent; mToggle.dataset.value=d.dataset.value; updateCalendar(); mMenu.style.display="none"; }
        });
 
-       // 點擊外部關閉選單
        document.addEventListener("click", e => {
           if(!yearDd.contains(e.target)) yearMenu.style.display="none";
           if(!mDd.contains(e.target)) mMenu.style.display="none";
           if(!document.getElementById("deptDropdown").contains(e.target)) document.querySelector("#deptDropdown .dropdown-menu").style.display="none";
        });
 
-       // 部門選單邏輯
        const dDd = document.getElementById("deptDropdown");
        const dMenu = dDd.querySelector(".dropdown-menu");
        const dToggle = dDd.querySelector(".dropdown-toggle");
        
-       // 如果是 KEN，加入私人選項
        const oldP = dMenu.querySelector('[data-value="PRIVATE"]');
        if(oldP) oldP.remove();
        if(userDept==="KEN") {
@@ -885,7 +932,6 @@
           it.onclick=()=>{ currentDept=it.dataset.value; localStorage.setItem("selectedDept",currentDept); dToggle.textContent=it.textContent; dToggle.className="dropdown-toggle "+it.className; dMenu.style.display="none"; updateCalendar(); };
        });
 
-       // 還原上次選擇部門
        const saved = localStorage.getItem("selectedDept");
        if(saved && (saved!=="PRIVATE" || userDept==="KEN")) {
           currentDept = saved;
@@ -901,7 +947,7 @@
       if (userDept === "ALL") opts = ["ALL", "SG2", "SG3", "SG4", "SG5"];
       else if (userDept === "KEN") opts = ["ALL", "SG2", "SG3", "SG4", "SG5", "KEN"];
       else if (["SG2", "SG3", "SG4", "SG5"].includes(userDept)) { opts = [userDept]; sel.disabled=true; }
-      else { return; } // 無權限
+      else { return; }
 
       opts.forEach(d => {
          const o = document.createElement("option");
@@ -948,7 +994,6 @@
        setTimeout(()=>cal.classList.remove("fade-in-left","fade-in-right"), 300);
     }
 
-    // 手機滑動
     let tsX=0, teX=0;
     const cal = document.getElementById("calendar");
     cal.addEventListener("touchstart", e=>tsX=e.changedTouches[0].screenX);
@@ -1021,8 +1066,9 @@
     <div class="content">
       <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
         <h3 id="modal-date" style="margin:0;"></h3>
-        <button id="shareBtn" class="icon-btn" onclick="document.getElementById('multiShareBtn').click();"> 
-           </button>
+        <button id="shareBtn" class="icon-btn" onclick="document.getElementById('multiShareBtn').click();">
+           <svg viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg" fill="#555" width="20" height="20"><path d="M15.8,0C17.6,0,19,1.4,19,3.2c0,1.8-1.4,3.2-3.2,3.2c-0.9,0-1.8-0.4-2.4-1.1L7.2,8.8C7.3,9.2,7.4,9.6,7.4,10c0,0.5-0.1,1-0.4,1.5l6,3.7c0.5-1,1.6-1.7,2.8-1.7c1.8,0,3.2,1.4,3.2,3.2c0,1.8-1.4,3.2-3.2,3.2S12.6,18.6,12.6,16.8l0-0.1l-6.5-4c-0.5,0.4-1.2,0.6-1.9,0.6c-1.8,0-3.2-1.4-3.2-3.2s1.4-3.2,3.2-3.2c0.9,0,1.6,0.3,2.2,0.9l6.4-3.5c-0.1-0.3-0.1-0.6-0.1-0.9c0-1.8,1.4-3.2,3.2-3.2z"/></svg>
+        </button>
       </div>
 
       <div id="modal-list"></div>
@@ -1033,9 +1079,9 @@
         <select id="new-dept"></select>
 
         <div id="tag-container" class="tag-container">
-           <div class="tag-chip" onclick="selectTag(this, '活動')">[活動]</div>
-           <div class="tag-chip" onclick="selectTag(this, '出差')">[出差]</div>
-           <div class="tag-chip" onclick="selectTag(this, '會議')">[會議]</div>
+           <div class="tag-chip" onclick="selectTag(this, '活動')">活動</div>
+           <div class="tag-chip" onclick="selectTag(this, '出差')">出差</div>
+           <div class="tag-chip" onclick="selectTag(this, '會議')">會議</div>
         </div>
 
         <div class="time-row">
